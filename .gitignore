@@ -1,0 +1,5 @@
+.idea/
+relation_extraction_for_business.egg-info/
+__pycache__
+*/__pycache__
+resources/data/train
