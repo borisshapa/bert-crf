@@ -93,6 +93,7 @@ def main(args: Namespace):
                 word += ch
 
             encoded = tokenizer(words, is_split_into_words=True, add_special_tokens=False)
+            input_ids = encoded["input_ids"]
             text_labels = []
 
             prev_word_ind = None
@@ -121,17 +122,21 @@ def main(args: Namespace):
 
                 if len(text_labels) + len(word_labels) > args.max_seq_len:
                     tokenized_texts.append({
-                        "input_ids": encoded["input_ids"][prev_token_ind:prev_token_ind + len(text_labels)],
-                        "text_labels": text_labels
+                        "input_ids": input_ids[prev_token_ind:prev_token_ind + len(text_labels)],
+                        "text_labels": text_labels.copy()
                     })
+
+                    prev_token_ind += len(text_labels)
                     text_labels.clear()
                     part_id += 1
+
+                prev_word_ind = word_ind
 
             text_labels.extend(word_labels)
             if len(text_labels) > 0:
                 tokenized_texts.append({
-                    "input_ids": encoded["input_ids"][prev_token_ind:-1],
-                    "text_labels": text_labels
+                    "input_ids": input_ids[prev_token_ind:],
+                    "text_labels": text_labels.copy()
                 })
 
     labels_set = set()
@@ -146,8 +151,12 @@ def main(args: Namespace):
     for i in range(len(tokenized_texts)):
         tokenized_texts[i]["labels"] = [label2id[label] for label in tokenized_texts[i]["text_labels"]]
 
-    with open(os.path.join(args.save_to, "tokenized_texts.json"), "w") as tokenized_texts_file:
-        json.dump(tokenized_texts, tokenized_texts_file)
+    with open(os.path.join(args.save_to, "tokenized_texts.jsonl"), "w") as tokenized_texts_file:
+        for tokenized_text in tokenized_texts:
+            assert len(tokenized_text["input_ids"]) == len(tokenized_text["labels"])
+            json.dump(tokenized_text, tokenized_texts_file)
+            tokenized_texts_file.write("\n")
+
     with open(os.path.join(args.save_to, "label2id.json"), "w") as label2id_file:
         json.dump(label2id, label2id_file)
     with open(os.path.join(args.save_to, "id2label.json"), "w") as id2label_file:
