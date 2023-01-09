@@ -1,5 +1,6 @@
 import json
 
+import torch
 import torch.utils.data as td
 from torch.nn.utils.rnn import pad_sequence
 
@@ -20,9 +21,11 @@ class MaskedLanguageModelingDataset(td.Dataset):
         return len(self.masked_texts)
 
     def collate_function(self, batch):
+        batch = [{k: torch.tensor(t) for k, t in b.items()} for b in batch]
+
         input_ids = [item["input_ids"] for item in batch]
         labels = [item["labels"] for item in batch]
-        attention_mask = [item["attention_mask"] for item in batch]
+        attention_mask = [torch.ones(len(item)) for item in input_ids]
 
         return {
             "input_ids": pad_sequence(input_ids, batch_first=True).to(self.device),

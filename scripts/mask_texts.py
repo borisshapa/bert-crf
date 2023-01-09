@@ -58,21 +58,17 @@ def main(args: Namespace):
 
             labels = []
             input_ids = []
-            attention_mask = []
 
             for token in encoded["input_ids"][:args.max_seq_len]:
                 labels.append(token)
 
                 if random.random() < args.masked_proba:
                     input_ids.append(tokenizer.mask_token_id)
-                    attention_mask.append(0)
                 else:
                     input_ids.append(token)
-                    attention_mask.append(1)
 
             masked_texts.append({
                 "input_ids": input_ids,
-                "attention_mask": attention_mask,
                 "labels": labels
             })
 
