@@ -1,8 +1,11 @@
 import glob
+import json
 import os.path
+import random
 from argparse import ArgumentParser, Namespace
 
 import transformers
+from tqdm import tqdm
 from transformers import AutoTokenizer
 
 
@@ -13,6 +16,12 @@ def configure_arg_parser():
         type=str,
         default="resources/data/train",
         help="Directory where the source data is located",
+    )
+    arg_parser.add_argument(
+        "--num_threads",
+        type=int,
+        default=-1,
+        help="Amount of threads which will handle given text"
     )
     arg_parser.add_argument(
         "--hf-tokenizer",
@@ -46,13 +55,35 @@ def main(args: Namespace):
     os.makedirs(args.save_to, exist_ok=True)
 
     tokenizer: transformers.BertTokenizer = AutoTokenizer.from_pretrained(args.hf_tokenizer)
-    tokenized_texts = []
+    masked_texts = []
 
-    for file in glob.glob(f"{args.train_dir}/**/*.txt", recursive=True):
+    for file in tqdm(glob.glob(f"{args.train_dir}/**/*.txt", recursive=True)):
         with open(file, "r") as text_file:
-            lines = text_file.readlines()
-            lines = [l for l in lines if len(l) > 0]
-            print(lines)
+            text = text_file.read()
+            encoded = tokenizer(text, add_special_tokens=False)
+
+            labels = []
+            input_ids = []
+            attention_mask = []
+
+            for token in encoded["input_ids"][:args.max_seq_len]:
+                labels.append(token)
+
+                if random.random() < args.masked_proba:
+                    input_ids.append(tokenizer.mask_token_id)
+                    attention_mask.append(0)
+                else:
+                    input_ids.append(token)
+                    attention_mask.append(1)
+
+            masked_texts.append({
+                "input_ids": input_ids,
+                "attention_mask": attention_mask,
+                "labels": labels
+            })
+
+    with open(os.path.join(args.save_to, "masked_texts.json"), "w") as f:
+        json.dump(masked_texts, f)
 
 
 if __name__ == "__main__":
