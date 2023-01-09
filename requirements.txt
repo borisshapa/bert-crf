@@ -5,3 +5,4 @@ jupyter
 torch~=1.12.1
 datasets~=2.6.1
 setuptools~=65.5.0
+matplotlib

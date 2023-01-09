@@ -32,6 +32,7 @@ class NerDataset(Dataset):
             "attention_mask": pad_sequence(attention_mask, batch_first=True),
         }
 
+
 if __name__ == "__main__":
     dataset = NerDataset("resources/data/train/tokenized_texts.jsonl")
     tokenizer = AutoTokenizer.from_pretrained("sberbank-ai/ruBert-base")

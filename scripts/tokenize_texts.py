@@ -15,7 +15,7 @@ SUBSEQUENT_TOKEN_TAG_PREFIX = "I"
 def configure_arg_parser():
     arg_parser = ArgumentParser()
     arg_parser.add_argument(
-        "--train-dir",
+        "--dir",
         type=str,
         default="resources/data/train",
         help="Directory where the source data is located",
@@ -39,6 +39,12 @@ def configure_arg_parser():
         default="resources/data/train",
         help="Directory where tokenized and labeled texts are saved."
     )
+    arg_parser.add_argument(
+        "--label2id",
+        type=str,
+        default=None,
+        help="json file with mapping from label name to id"
+    )
     return arg_parser
 
 
@@ -48,7 +54,7 @@ def main(args: Namespace):
     tokenizer = AutoTokenizer.from_pretrained(args.hf_tokenizer)
     tags_set = set()
     tokenized_texts = []
-    for file in glob.glob(f"{args.train_dir}/**/*.txt", recursive=True):
+    for file in glob.glob(f"{args.dir}/**/*.txt", recursive=True):
         with open(file, "r") as text_file:
             annotation_path = file.split(".")[0] + ".ann"
 
@@ -145,7 +151,11 @@ def main(args: Namespace):
         labels_set.add(f"{SUBSEQUENT_TOKEN_TAG_PREFIX}-{tag}")
     labels_set.add(NOT_A_NAMED_ENTITY)
 
-    label2id = {label: id for id, label in enumerate(labels_set)}
+    if args.label2id is not None:
+        with open(args.label2id, "r") as label2id_file:
+            label2id = json.load(label2id_file)
+    else:
+        label2id = {label: id for id, label in enumerate(labels_set)}
     id2label = {id: label for label, id in label2id.items()}
 
     for i in range(len(tokenized_texts)):
