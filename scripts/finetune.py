@@ -104,7 +104,7 @@ def main(args: Namespace):
     for e in range(args.epochs):
         train_loss, valid_loss = epoch(bert, optimizer, scheduler, train_loader, valid_loader)
 
-        print(f"==> train loss: {train_loss:.5f} | valid loss: {valid_loss:.5f}")
+        print(f"==> epoch: {e} finished | train loss: {train_loss:.5f} | valid loss: {valid_loss:.5f}")
         print()
 
         if np.min(valid_losses, initial=np.Inf) < valid_loss:
