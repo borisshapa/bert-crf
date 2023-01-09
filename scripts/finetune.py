@@ -95,7 +95,7 @@ def main(args: Namespace):
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
 
-    torch.save(model, "ruREBus-bert.pth")
+    model.save_pretrained("ruREBus-bert")
 
 
 def epoch(
