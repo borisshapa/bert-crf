@@ -68,7 +68,7 @@ def configure_arg_parser():
 def main(args: Namespace):
     os.makedirs(args.save_to, exist_ok=True)
 
-    dataset = MaskedLanguageModelingDataset(file=args.dataset, device=args.device)
+    dataset = MaskedLanguageModelingDataset(jsonl_file=args.dataset, device=args.device)
 
     train_indices, valid_indices = train_test_split(np.arange(len(dataset)), test_size=args.test_size)
 
@@ -90,12 +90,14 @@ def main(args: Namespace):
         train_loss, valid_loss = epoch(model, optimizer, train_loader, valid_loader)
 
         if np.min(valid_losses, initial=np.Inf) < valid_loss:
+            print(f"Overfitting! Training loop is finished at {e + 1} epoch")
             break
 
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
 
-    model.save_pretrained("ruREBus-bert")
+    torch.save(model, "xxx.pth")
+    model.save_pretrained("ruREBus/ruBert-base")
 
 
 def epoch(

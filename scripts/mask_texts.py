@@ -18,12 +18,6 @@ def configure_arg_parser():
         help="Directory where the source data is located",
     )
     arg_parser.add_argument(
-        "--num_threads",
-        type=int,
-        default=-1,
-        help="Amount of threads which will handle given text"
-    )
-    arg_parser.add_argument(
         "--hf-tokenizer",
         type=str,
         default="sberbank-ai/ruBert-base",
@@ -82,8 +76,11 @@ def main(args: Namespace):
                 "labels": labels
             })
 
-    with open(os.path.join(args.save_to, "masked_texts.json"), "w") as f:
-        json.dump(masked_texts, f)
+    with open(os.path.join(args.save_to, "masked_texts.jsonl"), "w") as masked_text_file:
+        for masked_text in masked_texts:
+            assert len(masked_text["input_ids"]) == len(masked_text["labels"])
+            json.dump(masked_text, masked_text_file)
+            masked_text_file.write("\n")
 
 
 if __name__ == "__main__":

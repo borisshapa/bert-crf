@@ -1,9 +1,9 @@
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
 from transformers import AutoModel
 
-from datasets.ner_dataset import NerDataset
-from torch.utils.data import DataLoader
+from datasets import NerDataset
 
 LOG_INF = 10e5
 
@@ -21,7 +21,7 @@ class BertCRF(nn.Module):
         self.hidden2label = nn.Linear(self.bert.config.hidden_size, num_labels)
 
     def _compute_log_denominator(
-        self, features: torch.Tensor, mask: torch.Tensor
+            self, features: torch.Tensor, mask: torch.Tensor
     ) -> torch.Tensor:
         seq_len = features.shape[0]
         mask = mask.bool()
@@ -44,22 +44,22 @@ class BertCRF(nn.Module):
         return torch.logsumexp(log_score_over_all_seq, dim=1)
 
     def _compute_log_numerator(
-        self, features: torch.Tensor, labels: torch.Tensor, mask: torch.Tensor
+            self, features: torch.Tensor, labels: torch.Tensor, mask: torch.Tensor
     ) -> torch.Tensor:
         seq_len = features.shape[0]
 
         score_over_seq = self.start_transitions[labels[0]] + features[0, :, labels[0]]
         for i in range(1, seq_len):
             score_over_seq += (
-                self.transitions[labels[i - 1], labels[i]] + features[i, :, labels[i]]
-            ) * mask[i]
+                                      self.transitions[labels[i - 1], labels[i]] + features[i, :, labels[i]]
+                              ) * mask[i]
         seq_lens = mask.sum(dim=0) - 1
         last_tags = labels[seq_lens.long()]
         score_over_seq += self.end_transitions[last_tags]
         return score_over_seq
 
     def _get_bert_features(
-        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
+            self, input_ids: torch.Tensor, attention_mask: torch.Tensor
     ) -> torch.Tensor:
         hidden = self.bert(input_ids, attention_mask=attention_mask)[
             "last_hidden_state"
@@ -68,10 +68,10 @@ class BertCRF(nn.Module):
         return self.hidden2label(hidden)
 
     def neg_log_likelihood(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor,
-        labels: torch.Tensor,
+            self,
+            input_ids: torch.Tensor,
+            attention_mask: torch.Tensor,
+            labels: torch.Tensor,
     ) -> torch.Tensor:
         features = self._get_bert_features(
             input_ids=input_ids, attention_mask=attention_mask
@@ -91,7 +91,7 @@ class BertCRF(nn.Module):
         return torch.mean(log_denominator - log_numerator)
 
     def _viterbi_decode(
-        self, features: torch.Tensor, mask: torch.Tensor
+            self, features: torch.Tensor, mask: torch.Tensor
     ) -> torch.Tensor:
         seq_len, bs, _ = features.shape
         mask = mask.bool()
