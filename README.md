@@ -16,14 +16,14 @@ $ python scripts/tokenize_texts.py
 В качестве предобученной модели была выбрана
 модель [sberbank/ruBERT-base](https://huggingface.co/sberbank-ai/ruBert-base).
 Однако для того, чтобы получить более высокое качество при решении задач *Named Entity Recognition* и *Relation
-Extraction* на RuREBus датасете, мы дообучили BERT на неразмеченных данных того же домена представленных
-авторами: https://disk.yandex.ru/d/9uKbo3p0ghdNpQ
+Extraction* на датасете RuREBus, мы дообучили BERT на неразмеченных данных того же
+домена: https://disk.yandex.ru/d/9uKbo3p0ghdNpQ
 
-1. Подготовка датасета для доубучения: 
+1. Подготовка датасета для доубучения:
    ```shell
    $ python scripts/mask_texts.py 
    ```
-2. Запуск модели для дообучения:
+2. Запуск дообучения модели:
    ```shell
    $ python scripts/finetune.py
    ```
