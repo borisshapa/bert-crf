@@ -3,6 +3,7 @@ from argparse import ArgumentParser, Namespace
 
 import numpy as np
 import torch.nn
+import torch.optim.lr_scheduler
 import torch.utils.data as td
 import transformers
 from sklearn.model_selection import train_test_split
@@ -39,10 +40,23 @@ def configure_arg_parser():
         help="Amount of epochs to train"
     )
     arg_parser.add_argument(
-        "--learning-rate",
+        "--lr",
         type=float,
         default=1e-5,
         help="Learning rate of AdamW optimizer. (default: 1e-5)"
+    )
+    arg_parser.add_argument(
+        "--lr-gamma",
+        type=float,
+        default=0.99,
+        help="StepLR scheduler gamma coefficient. (default: 0.99)"
+    )
+    arg_parser.add_argument(
+        "--lr-step-size",
+        type=int,
+        default=30,
+        help="StepLR scheduler step size, after given amount of steps will multiple learning rate by given gamma. "
+             "(default: 30)"
     )
     arg_parser.add_argument(
         "--valid-size",
@@ -81,13 +95,17 @@ def main(args: Namespace):
                                  collate_fn=dataset.collate_function)
 
     bert = transformers.BertForMaskedLM.from_pretrained(args.model_name).to(args.device)
-    optimizer = torch.optim.AdamW(bert.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.AdamW(bert.parameters(), lr=args.lr)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_step_size, gamma=args.lr_gamma)
 
     train_losses = []
     valid_losses = []
 
     for e in range(args.epochs):
-        train_loss, valid_loss = epoch(bert, optimizer, train_loader, valid_loader)
+        train_loss, valid_loss = epoch(bert, optimizer, scheduler, train_loader, valid_loader)
+
+        print(f"==> epoch: {e} finished | train loss: {train_loss:.5f} | valid loss: {valid_loss:.5f}")
+        print()
 
         if np.min(valid_losses, initial=np.Inf) < valid_loss:
             print(f"Overfitting! Training loop is finished at {e + 1} epoch")
@@ -103,6 +121,7 @@ def main(args: Namespace):
 def epoch(
         model: transformers.BertForMaskedLM,
         optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler.StepLR,
         train_loader: td.DataLoader,
         valid_loader: td.DataLoader
 ):
@@ -115,6 +134,8 @@ def epoch(
         loss = output.loss
         loss.backward()
         optimizer.step()
+        scheduler.step()
+
         train_loss += loss.detach().cpu().item()
         bar.set_postfix_str(f"loss: {loss.detach().cpu().item():.4f}")
 
