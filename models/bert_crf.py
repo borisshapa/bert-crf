@@ -1,11 +1,11 @@
-from typing import Tuple, List
+from typing import List
 
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
 from transformers import AutoModel
 
 from datasets.ner_dataset import NerDataset
-from torch.utils.data import DataLoader
 
 LOG_INF = 10e5
 
@@ -24,6 +24,7 @@ class BertCRF(nn.Module):
         self.cross_entropy = nn.CrossEntropyLoss()
 
         self.bert = AutoModel.from_pretrained(bert_name)
+
         self.dropout = nn.Dropout(dropout)
         self.hidden2label = nn.Linear(self.bert.config.hidden_size, num_labels)
 
@@ -36,7 +37,7 @@ class BertCRF(nn.Module):
         nn.init.uniform_(self.transitions, -0.1, 0.1)
 
     def _compute_log_denominator(
-        self, features: torch.Tensor, mask: torch.BoolTensor
+        self, features: torch.Tensor, mask: torch.Tensor
     ) -> torch.Tensor:
         seq_len = features.shape[0]
 
@@ -60,15 +61,16 @@ class BertCRF(nn.Module):
     def _compute_log_numerator(
         self, features: torch.Tensor, labels: torch.Tensor, mask: torch.Tensor
     ) -> torch.Tensor:
-        seq_len = features.shape[0]
+        seq_len, bs, _ = features.shape
 
-        score_over_seq = self.start_transitions[labels[0]] + features[0, :, labels[0]]
+        score_over_seq = self.start_transitions[labels[0]] + features[0, torch.arange(bs), labels[0]]
+
         for i in range(1, seq_len):
             score_over_seq += (
-                self.transitions[labels[i - 1], labels[i]] + features[i, :, labels[i]]
+                self.transitions[labels[i - 1], labels[i]] + features[i, torch.arange(bs), labels[i]]
             ) * mask[i]
         seq_lens = mask.sum(dim=0) - 1
-        last_tags = labels[seq_lens.long()]
+        last_tags = labels[seq_lens.long(), torch.arange(bs)]
         score_over_seq += self.end_transitions[last_tags]
         return score_over_seq
 
@@ -112,7 +114,7 @@ class BertCRF(nn.Module):
             )
 
     def _viterbi_decode(
-        self, features: torch.Tensor, mask: torch.BoolTensor
+        self, features: torch.Tensor, mask: torch.Tensor
     ) -> List[List[int]]:
         seq_len, bs, _ = features.shape
 
@@ -122,14 +124,14 @@ class BertCRF(nn.Module):
 
         for i in range(1, seq_len):
             next_log_score_over_all_seq = (
-                log_score_over_all_seq.unsqueeze(2) + self.transitions
+                log_score_over_all_seq.unsqueeze(2)
+                + self.transitions
+                + features[i].unsqueeze(1)
             )
 
             next_log_score_over_all_seq, indices = next_log_score_over_all_seq.max(
                 dim=1
             )
-
-            next_log_score_over_all_seq = next_log_score_over_all_seq + features[i]
 
             log_score_over_all_seq = torch.where(
                 mask[i].unsqueeze(1),
@@ -143,18 +145,16 @@ class BertCRF(nn.Module):
         log_score_over_all_seq += self.end_transitions
         seq_lens = mask.sum(dim=0) - 1
 
-        # path_scores = []
         best_paths = []
         for seq_ind in range(bs):
             best_label_id = torch.argmax(log_score_over_all_seq[seq_ind]).item()
             best_path = [best_label_id]
 
-            for backpointer in backpointers[: seq_lens[seq_ind]]:
+            for backpointer in reversed(backpointers[: seq_lens[seq_ind]]):
                 best_path.append(backpointer[seq_ind][best_path[-1]].item())
 
             best_path.reverse()
             best_paths.append(best_path)
-            # path_scores.append(log_score_over_all_seq[seq_ind][best_label_id].item())
 
         return best_paths
 
