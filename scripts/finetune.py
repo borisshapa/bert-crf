@@ -18,7 +18,7 @@ def configure_arg_parser():
         "--dataset",
         type=str,
         default="resources/data/train/masked_texts.json",
-        help="Path to JSON where the source data is stored",
+        help="Path to .jsonl file where the source data is stored",
     )
     arg_parser.add_argument(
         "--model-name",
@@ -42,21 +42,21 @@ def configure_arg_parser():
     arg_parser.add_argument(
         "--lr",
         type=float,
-        default=1e-5,
-        help="Learning rate of AdamW optimizer. (default: 1e-5)"
+        default=1e-4,
+        help="Learning rate of AdamW optimizer. (default: 1e-4)"
     )
     arg_parser.add_argument(
         "--lr-gamma",
         type=float,
-        default=0.99,
-        help="StepLR scheduler gamma coefficient. (default: 0.99)"
+        default=0.975,
+        help="StepLR scheduler gamma coefficient. (default: 0.975)"
     )
     arg_parser.add_argument(
         "--lr-step-size",
         type=int,
-        default=30,
+        default=500,
         help="StepLR scheduler step size, after given amount of steps will multiple learning rate by given gamma. "
-             "(default: 30)"
+             "(default: 500)"
     )
     arg_parser.add_argument(
         "--valid-size",
@@ -67,8 +67,8 @@ def configure_arg_parser():
     arg_parser.add_argument(
         "--batch-size",
         type=int,
-        default=128,
-        help="Batch size. (default: 128)"
+        default=32,
+        help="Batch size. (default: 32)"
     )
     arg_parser.add_argument(
         "--save-to",
@@ -105,17 +105,23 @@ def main(args: Namespace):
         train_loss, valid_loss = epoch(bert, optimizer, scheduler, train_loader, valid_loader)
 
         print(f"==> epoch: {e} finished | train loss: {train_loss:.5f} | valid loss: {valid_loss:.5f}")
-        print()
 
-        if np.min(valid_losses, initial=np.Inf) < valid_loss:
+        if valid_loss < np.min(valid_losses, initial=np.Inf):
+            print("==> checkpoint updated <==")
+            bert.save_pretrained(os.path.join(args.save_to, "ruREBus-bert"))
+        else:
             print(f"Overfitting! Training loop is finished at {e + 1} epoch")
             break
 
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
+        print()
 
-    torch.save(bert, os.path.join(args.save_to, "ruREBus.pth"))
-    bert.save_pretrained(os.path.join(args.save_to, "ruREBus-bert"))
+    with open("logs.csv", "w") as f:
+        logs = ["epoch,train,valid"]
+        logs += [f"{i},{tl},{vl}" for i, (tl, vl) in enumerate(zip(train_losses, valid_losses))]
+        logs = "\n".join(logs)
+        f.write(logs)
 
 
 def epoch(
@@ -130,6 +136,7 @@ def epoch(
     model.train()
     bar = tqdm(train_loader, desc="training")
     for batch in bar:
+        optimizer.zero_grad()
         output = model(**batch)
         loss = output.loss
         loss.backward()
