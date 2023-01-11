@@ -1,8 +1,12 @@
 argparse~=1.4.0
 transformers~=4.18.0
-scikit-learn
+scikit-learn~=1.0.2
 jupyter
 torch~=1.12.1
 datasets~=2.6.1
 setuptools~=65.5.0
 matplotlib
+numpy~=1.22.3
+sklearn~=0.0
+tqdm~=4.64.0
+nltk~=3.7

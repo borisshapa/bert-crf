@@ -2,15 +2,12 @@ from typing import List
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
 from transformers import AutoModel
-
-from datasets.ner_dataset import NerDataset
 
 LOG_INF = 10e5
 
 
-class BertCRF(nn.Module):
+class BertCrf(nn.Module):
     def __init__(
         self,
         num_labels: int,
@@ -63,11 +60,14 @@ class BertCRF(nn.Module):
     ) -> torch.Tensor:
         seq_len, bs, _ = features.shape
 
-        score_over_seq = self.start_transitions[labels[0]] + features[0, torch.arange(bs), labels[0]]
+        score_over_seq = (
+            self.start_transitions[labels[0]] + features[0, torch.arange(bs), labels[0]]
+        )
 
         for i in range(1, seq_len):
             score_over_seq += (
-                self.transitions[labels[i - 1], labels[i]] + features[i, torch.arange(bs), labels[i]]
+                self.transitions[labels[i - 1], labels[i]]
+                + features[i, torch.arange(bs), labels[i]]
             ) * mask[i]
         seq_lens = mask.sum(dim=0) - 1
         last_tags = labels[seq_lens.long(), torch.arange(bs)]
@@ -177,11 +177,8 @@ class BertCRF(nn.Module):
                 predictions.append(labels[i][attention_mask[i]].tolist())
             return predictions
 
+    def save_to(self, path: str):
+        torch.save(self.state_dict(), path)
 
-if __name__ == "__main__":
-    dataset = NerDataset("resources/data/train/tokenized_texts.jsonl")
-    loader = DataLoader(dataset, batch_size=4, collate_fn=dataset.collate_function)
-    batch = next(iter(loader))
-
-    model = BertCRF(17, "sberbank-ai/ruBert-base")
-    print(model.neg_log_likelihood(**batch))
+    def load_from(self, path: str):
+        self.load_state_dict(torch.load(path))
