@@ -3,18 +3,12 @@ from typing import Dict
 import torch
 from torch import nn
 
-from models.bert_crf import BertCrf
-
 
 class ReBertCrf(nn.Module):
     def __init__(
         self,
-        num_labels: int,
         num_re_tags: int,
-        bert_name: str,
-        bert_crf_path: str,
-        dropout: float,
-        use_crf: bool = True,
+        dropout: float
     ):
         super().__init__()
 
@@ -39,3 +33,4 @@ class ReBertCrf(nn.Module):
         )
 
     def forward(self, input: Dict[str, torch.Tensor]):
+        pass

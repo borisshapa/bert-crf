@@ -79,6 +79,14 @@ def binary_search(
     return -1
 
 
+def load_jsonl(filename: str) -> List[Any]:
+    with open(filename, encoding="utf-8") as f:
+        result = []
+        for line in f:
+            result.append(json.loads(line))
+        return result
+
+
 def save_jsonl(obj: List[Any], file: str):
     with open(file, "w") as json_file:
         for item in obj:

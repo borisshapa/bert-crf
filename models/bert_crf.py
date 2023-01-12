@@ -1,4 +1,5 @@
-from typing import List
+import os
+from typing import List, Tuple
 
 import torch
 from torch import nn
@@ -74,14 +75,14 @@ class BertCrf(nn.Module):
         score_over_seq += self.end_transitions[last_tags]
         return score_over_seq
 
-    def _get_bert_features(
+    def get_bert_features(
         self, input_ids: torch.Tensor, attention_mask: torch.Tensor
-    ) -> torch.Tensor:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         hidden = self.bert(input_ids, attention_mask=attention_mask)[
             "last_hidden_state"
         ]
         hidden = self.dropout(hidden)
-        return self.hidden2label(hidden)
+        return self.hidden2label(hidden), hidden
 
     def forward(
         self,
@@ -89,7 +90,7 @@ class BertCrf(nn.Module):
         attention_mask: torch.Tensor,
         labels: torch.Tensor,
     ) -> torch.Tensor:
-        features = self._get_bert_features(
+        features, _ = self.get_bert_features(
             input_ids=input_ids, attention_mask=attention_mask
         )
         attention_mask = attention_mask.bool()
@@ -161,7 +162,7 @@ class BertCrf(nn.Module):
     def decode(
         self, input_ids: torch.Tensor, attention_mask: torch.Tensor
     ) -> List[List[int]]:
-        features = self._get_bert_features(
+        features, _ = self.get_bert_features(
             input_ids=input_ids, attention_mask=attention_mask
         )
         attention_mask = attention_mask.bool()
@@ -178,6 +179,7 @@ class BertCrf(nn.Module):
             return predictions
 
     def save_to(self, path: str):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save(self.state_dict(), path)
 
     def load_from(self, path: str):

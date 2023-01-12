@@ -80,6 +80,7 @@ def main(args: Namespace):
     labels_set = set()
     retags_set = set()
 
+    text_id = 0
     for text_path in tqdm(
         glob.glob(
             f"{args.dir}/**/*.txt",
@@ -154,9 +155,6 @@ def main(args: Namespace):
                 tokenized_text_spans[end_word_pos_ind] = (end_ch_pos, end)
                 tokenized_text_spans.insert(end_word_pos_ind, (start, end_ch_pos))
 
-        with open("spans.json", "w") as out_file:
-            json.dump(tokenized_text_spans, out_file)
-
         for id in id2annotation.keys():
             id2annotation[id].start_word_pos = binary_search(
                 tokenized_text_spans, id2annotation[id].start_ch_pos, lambda x: x[0]
@@ -218,6 +216,7 @@ def main(args: Namespace):
             current_seq_labels.append(text_labels[token_ind])
 
             if len(current_seq_ids) + len(dump["input_ids"]) >= args.max_seq_len:
+                dump_relations = {"id": text_id, "relations": []}
                 for re_annotation in re_annotations:
                     arg1 = re_annotation.arg1
                     arg2 = re_annotation.arg2
@@ -248,9 +247,8 @@ def main(args: Namespace):
                         and end_token_arg1 < token_in_dump
                         and end_token_arg2 < token_in_dump
                     ):
-                        relations.append(
+                        dump_relations["relations"].append(
                             {
-                                "input_ids": dump["input_ids"].copy(),
                                 "arg1_tag": arg1_tag,
                                 "arg2_tag": arg2_tag,
                                 "arg1_pos": [start_token_arg1, end_token_arg1],
@@ -259,9 +257,13 @@ def main(args: Namespace):
                             }
                         )
                         relations_count += 1
+                relations.append(copy.deepcopy(dump_relations))
+                dump["id"] = text_id
                 tokenized_texts.append(copy.deepcopy(dump))
                 total_token_dumped += len(dump["input_ids"])
-                for key in dump.keys():
+                text_id += 1
+
+                for key in ["input_ids", "labels", "text_labels"]:
                     dump[key].clear()
         skipped_relations += len(re_annotations) - relations_count
 
@@ -273,7 +275,8 @@ def main(args: Namespace):
             label2id[label] for label in tokenized_texts[i]["text_labels"]
         ]
     for i in range(len(relations)):
-        relations[i]["tag"] = retag2id[relations[i]["re_tag"]]
+        for j in range(len(relations[i]["relations"])):
+            relations[i]["relations"][j]["tag"] = retag2id[relations[i]["relations"][j]["re_tag"]]
 
     save_jsonl(tokenized_texts, os.path.join(args.dir, "labeled_texts.jsonl"))
     save_jsonl(relations, os.path.join(args.dir, "relations.jsonl"))
