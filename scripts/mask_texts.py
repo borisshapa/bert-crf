@@ -68,10 +68,12 @@ def main(args: Namespace):
                 else:
                     input_ids.append(token)
 
-            masked_texts.append({
-                "input_ids": input_ids,
-                "labels": labels
-            })
+            masked_texts.append(
+                dict(
+                    input_ids=input_ids,
+                    labels=labels
+                )
+            )
 
     save_jsonl(masked_texts, os.path.join(args.save_to, "masked_texts.jsonl"))
 
