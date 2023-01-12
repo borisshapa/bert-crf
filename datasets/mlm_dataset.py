@@ -1,18 +1,14 @@
-import json
-
 import torch
 import torch.utils.data as td
 from torch.nn.utils.rnn import pad_sequence
 
+from re_utils.common import load_jsonl
+
 
 class MaskedLanguageModelingDataset(td.Dataset):
     def __init__(self, jsonl_file: str, device: str = "cpu"):
-        self.masked_texts = []
+        self.masked_texts = load_jsonl(jsonl_file)
         self.device = device
-
-        with open(jsonl_file, "r") as file:
-            for line in file:
-                self.masked_texts.append(json.loads(line))
 
     def __getitem__(self, index):
         return self.masked_texts[index]

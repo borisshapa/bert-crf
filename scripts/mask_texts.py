@@ -1,5 +1,4 @@
 import glob
-import json
 import os.path
 import random
 from argparse import ArgumentParser, Namespace
@@ -7,6 +6,8 @@ from argparse import ArgumentParser, Namespace
 import transformers
 from tqdm import tqdm
 from transformers import AutoTokenizer
+
+from re_utils.common import save_jsonl
 
 
 def configure_arg_parser():
@@ -72,11 +73,7 @@ def main(args: Namespace):
                 "labels": labels
             })
 
-    with open(os.path.join(args.save_to, "masked_texts.jsonl"), "w") as masked_text_file:
-        for masked_text in masked_texts:
-            assert len(masked_text["input_ids"]) == len(masked_text["labels"])
-            json.dump(masked_text, masked_text_file)
-            masked_text_file.write("\n")
+    save_jsonl(masked_texts, os.path.join(args.save_to, "masked_texts.jsonl"))
 
 
 if __name__ == "__main__":
