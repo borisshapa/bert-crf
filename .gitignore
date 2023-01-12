@@ -6,3 +6,7 @@ __pycache__
 
 resources/data/train
 resources/data/test
+
+weights
+spans.json
+validate_data.ipynb
