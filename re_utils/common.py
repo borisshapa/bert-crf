@@ -30,7 +30,7 @@ T = TypeVar("T")
 
 
 def lower_bound(
-    arr: List[T], element: float, key: Callable[[T], float] = lambda x: x
+        arr: List[T], element: float, key: Callable[[T], float] = lambda x: x
 ) -> int:
     left = -1
     right = len(arr)
@@ -46,7 +46,7 @@ def lower_bound(
 
 
 def upper_bound(
-    arr: List[T], element: float, key: Callable[[T], float] = lambda x: x
+        arr: List[T], element: float, key: Callable[[T], float] = lambda x: x
 ) -> int:
     left = -1
     right = len(arr)
@@ -62,7 +62,7 @@ def upper_bound(
 
 
 def binary_search(
-    arr: List[T], element: float, key: Callable[[T], float] = lambda x: x
+        arr: List[T], element: float, key: Callable[[T], float] = lambda x: x
 ) -> int:
     left = -1
     right = len(arr)

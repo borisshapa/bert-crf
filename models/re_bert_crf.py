@@ -6,9 +6,9 @@ from torch import nn
 
 class ReBertCrf(nn.Module):
     def __init__(
-        self,
-        num_re_tags: int,
-        dropout: float
+            self,
+            num_re_tags: int,
+            dropout: float
     ):
         super().__init__()
 

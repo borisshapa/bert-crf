@@ -9,7 +9,8 @@ import transformers
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from datasets import MaskedLanguageModelingDataset, Subset
+from datasets import JsonlDataset, Subset
+from re_utils.train import dict_to_device
 
 
 def configure_arg_parser():
@@ -82,7 +83,7 @@ def configure_arg_parser():
 def main(args: Namespace):
     os.makedirs(args.save_to, exist_ok=True)
 
-    dataset = MaskedLanguageModelingDataset(jsonl_file=args.dataset, device=args.device)
+    dataset = JsonlDataset(dataset_path=args.dataset)
 
     train_indices, valid_indices = train_test_split(np.arange(len(dataset)), test_size=args.valid_size)
 
@@ -102,7 +103,7 @@ def main(args: Namespace):
     valid_losses = []
 
     for e in range(args.epochs):
-        train_loss, valid_loss = epoch(bert, optimizer, scheduler, train_loader, valid_loader)
+        train_loss, valid_loss = epoch(bert, optimizer, scheduler, train_loader, valid_loader, args.device)
 
         print(f"==> epoch: {e} finished | train loss: {train_loss:.5f} | valid loss: {valid_loss:.5f}")
 
@@ -129,13 +130,15 @@ def epoch(
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler.StepLR,
         train_loader: td.DataLoader,
-        valid_loader: td.DataLoader
+        valid_loader: td.DataLoader,
+        device: str
 ):
     train_loss, valid_loss = 0, 0
 
     model.train()
     bar = tqdm(train_loader, desc="training")
     for batch in bar:
+        batch = dict_to_device(batch, device=device)
         optimizer.zero_grad()
         output = model(**batch)
         loss = output.loss
@@ -150,6 +153,7 @@ def epoch(
     bar = tqdm(valid_loader, desc="validation")
     for batch in bar:
         with torch.no_grad():
+            batch = dict_to_device(batch, device)
             output = model(**batch)
             loss = output.loss
             valid_loss += loss.detach().cpu().item()

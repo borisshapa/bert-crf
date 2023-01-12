@@ -1,19 +1,20 @@
 from typing import Dict, List, Optional
 
 import torch
+from IPython import display
 from matplotlib import pyplot as plt
 from sklearn.metrics import f1_score
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from IPython import display
+
 from datasets import NerDataset
 from models.bert_crf import BertCrf
 
 
 def dict_to_device(
-    dict: Dict[str, torch.Tensor],
-    device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        dict: Dict[str, torch.Tensor],
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ):
     for key, value in dict.items():
         dict[key] = value.to(device)
@@ -42,19 +43,19 @@ def draw_plots(loss_history: List[float], f1: List[float]):
 
 
 def train_ner(
-    num_labels: int,
-    bert_name: str,
-    train_tokenized_texts_path: str,
-    test_tokenized_texts_path: str,
-    dropout: float,
-    batch_size: int,
-    epochs: int,
-    log_every: int,
-    lr_bert: float,
-    lr_new_layers: float,
-    use_crf: bool = True,
-    save_to: Optional[str] = None,
-    device="cuda" if torch.cuda.is_available() else "cpu",
+        num_labels: int,
+        bert_name: str,
+        train_tokenized_texts_path: str,
+        test_tokenized_texts_path: str,
+        dropout: float,
+        batch_size: int,
+        epochs: int,
+        log_every: int,
+        lr_bert: float,
+        lr_new_layers: float,
+        use_crf: bool = True,
+        save_to: Optional[str] = None,
+        device="cuda" if torch.cuda.is_available() else "cpu",
 ):
     model = BertCrf(num_labels, bert_name, dropout=dropout, use_crf=use_crf)
     model = model.to(device)

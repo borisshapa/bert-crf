@@ -10,11 +10,11 @@ LOG_INF = 10e5
 
 class BertCrf(nn.Module):
     def __init__(
-        self,
-        num_labels: int,
-        bert_name: str,
-        dropout: float = 0.2,
-        use_crf: bool = True,
+            self,
+            num_labels: int,
+            bert_name: str,
+            dropout: float = 0.2,
+            use_crf: bool = True,
     ):
         super().__init__()
         self.num_labels = num_labels
@@ -35,7 +35,7 @@ class BertCrf(nn.Module):
         nn.init.uniform_(self.transitions, -0.1, 0.1)
 
     def _compute_log_denominator(
-        self, features: torch.Tensor, mask: torch.Tensor
+            self, features: torch.Tensor, mask: torch.Tensor
     ) -> torch.Tensor:
         seq_len = features.shape[0]
 
@@ -57,26 +57,26 @@ class BertCrf(nn.Module):
         return torch.logsumexp(log_score_over_all_seq, dim=1)
 
     def _compute_log_numerator(
-        self, features: torch.Tensor, labels: torch.Tensor, mask: torch.Tensor
+            self, features: torch.Tensor, labels: torch.Tensor, mask: torch.Tensor
     ) -> torch.Tensor:
         seq_len, bs, _ = features.shape
 
         score_over_seq = (
-            self.start_transitions[labels[0]] + features[0, torch.arange(bs), labels[0]]
+                self.start_transitions[labels[0]] + features[0, torch.arange(bs), labels[0]]
         )
 
         for i in range(1, seq_len):
             score_over_seq += (
-                self.transitions[labels[i - 1], labels[i]]
-                + features[i, torch.arange(bs), labels[i]]
-            ) * mask[i]
+                                      self.transitions[labels[i - 1], labels[i]]
+                                      + features[i, torch.arange(bs), labels[i]]
+                              ) * mask[i]
         seq_lens = mask.sum(dim=0) - 1
         last_tags = labels[seq_lens.long(), torch.arange(bs)]
         score_over_seq += self.end_transitions[last_tags]
         return score_over_seq
 
     def get_bert_features(
-        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
+            self, input_ids: torch.Tensor, attention_mask: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         hidden = self.bert(input_ids, attention_mask=attention_mask)[
             "last_hidden_state"
@@ -85,10 +85,10 @@ class BertCrf(nn.Module):
         return self.hidden2label(hidden), hidden
 
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor,
-        labels: torch.Tensor,
+            self,
+            input_ids: torch.Tensor,
+            attention_mask: torch.Tensor,
+            labels: torch.Tensor,
     ) -> torch.Tensor:
         features, _ = self.get_bert_features(
             input_ids=input_ids, attention_mask=attention_mask
@@ -115,7 +115,7 @@ class BertCrf(nn.Module):
             )
 
     def _viterbi_decode(
-        self, features: torch.Tensor, mask: torch.Tensor
+            self, features: torch.Tensor, mask: torch.Tensor
     ) -> List[List[int]]:
         seq_len, bs, _ = features.shape
 
@@ -125,9 +125,9 @@ class BertCrf(nn.Module):
 
         for i in range(1, seq_len):
             next_log_score_over_all_seq = (
-                log_score_over_all_seq.unsqueeze(2)
-                + self.transitions
-                + features[i].unsqueeze(1)
+                    log_score_over_all_seq.unsqueeze(2)
+                    + self.transitions
+                    + features[i].unsqueeze(1)
             )
 
             next_log_score_over_all_seq, indices = next_log_score_over_all_seq.max(
@@ -160,7 +160,7 @@ class BertCrf(nn.Module):
         return best_paths
 
     def decode(
-        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
+            self, input_ids: torch.Tensor, attention_mask: torch.Tensor
     ) -> List[List[int]]:
         features, _ = self.get_bert_features(
             input_ids=input_ids, attention_mask=attention_mask
