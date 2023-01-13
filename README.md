@@ -1,3 +1,8 @@
+## BERT-CRF for [RuREBus](https://github.com/dialogue-evaluation/RuREBus.git)
+
+The main goal of this task is to train BERT-CRF model for solving Named Entity Recognition and Relation Extraction tasks
+on RuREBus dataset (_Russian Relation Extraction for Business_)
+
 ### RuREBus dataset preprocessing
 
 ```shell
