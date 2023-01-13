@@ -1,31 +1,33 @@
-### Обработка датасета RuREBus
+### RuREBus dataset preprocessing
 
 ```shell
-# Скачиваем тренировочные файлы
+# Downloading RuREBus dataset
 $ git clone https://github.com/dialogue-evaluation/RuREBus.git
 
-# Распаковываем файлы
+# Unpacking train and test files
 $ bash unzip_data.sh
 
-# Токенезируем текст, для описания ожидаемых аргументов запустите с флагом --help
+# Tokenize text for NER and RE tasks. Run with --help flag to see documentation.
 $ python scripts/tokenize_texts.py
 ```
 
-### BERT Finetuning
+### BERT Finetuning via Masked Language Modeling (MLM)
 
-В качестве предобученной модели была выбрана
-модель [sberbank/ruBERT-base](https://huggingface.co/sberbank-ai/ruBert-base).
-Однако для того, чтобы получить более высокое качество при решении задач *Named Entity Recognition* и *Relation
-Extraction* на датасете RuREBus, мы дообучили BERT на неразмеченных данных того же
-домена: https://disk.yandex.ru/d/9uKbo3p0ghdNpQ
+There are a lot of Russian pretrained language models, the most popular one is
+[sberbank/ruBERT-base](https://huggingface.co/sberbank-ai/ruBert-base). In order to get a higher quality when solving
+_NER_ and _RE_ on the RuREBus dataset, we've applied masked language modeling to sberbank/ruBERT-base model.
+The dataset for finetunning was chosen from the same domain: https://disk.yandex.ru/d/9uKbo3p0ghdNpQ
 
-1. Подготовка датасета для доубучения:
+1. Create masked dataset for BERT finetunning:
    ```shell
    $ python scripts/mask_texts.py 
    ```
-2. Запуск дообучения модели:
+2. Running train script with created dataset:
    ```shell
    $ python scripts/mlm.py
    ```
 
-### Обучение модели BERT-CRF
+### BERT-CRF for Named Entity Recognition (NER):
+
+### BERT-CRF for Relation Extraction (RE):
+
