@@ -14,7 +14,10 @@ from re_utils.train import dict_to_device
 
 
 def configure_arg_parser():
-    arg_parser = ArgumentParser()
+    arg_parser = ArgumentParser(
+        description="Applies Masked Language Modeling (MLM) for BERT model using masked tokenized text in "
+                    "unsupervised manner. Use MLM for finetunning your model and shift model weight onto specific domain."
+    )
     arg_parser.add_argument(
         "--dataset",
         type=str,

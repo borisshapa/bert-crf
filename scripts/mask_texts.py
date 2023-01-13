@@ -11,7 +11,9 @@ from re_utils.common import save_jsonl
 
 
 def configure_arg_parser():
-    arg_parser = ArgumentParser()
+    arg_parser = ArgumentParser(
+        description="Tokenize given texts files and masks them for MLM training. See scripts/mlm.py for model training."
+    )
     arg_parser.add_argument(
         "--train-dir",
         type=str,

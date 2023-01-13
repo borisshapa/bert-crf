@@ -25,7 +25,7 @@ Extraction* на датасете RuREBus, мы дообучили BERT на н�
    ```
 2. Запуск дообучения модели:
    ```shell
-   $ python scripts/finetune.py
+   $ python scripts/mlm.py
    ```
 
 ### Обучение модели BERT-CRF
