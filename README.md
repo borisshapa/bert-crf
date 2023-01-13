@@ -35,7 +35,7 @@ The dataset for finetunning was chosen from the same domain: https://disk.yandex
 ### BERT-CRF for Named Entity Recognition (NER):
 
 In [experiments.ipynb](experiments.ipynb) notebook we've provide code for training different version of BERT model.
-Out finetunned BERT with CRF layer shows the best F1-Micro score.
+Our finetunned BERT with CRF layer shows the best F1-Micro score.
 
 |          | ruBERT | ruBERT + CRF | ruREBus-BERT | ruREBus-BERT + CRF |
 |----------|--------|--------------|--------------|--------------------|
