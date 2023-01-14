@@ -12,6 +12,5 @@ class Subset(td.Dataset):
     def __len__(self):
         return len(self.indices)
 
-__all__ = [
-    "Subset"
-]
+
+__all__ = ["Subset"]

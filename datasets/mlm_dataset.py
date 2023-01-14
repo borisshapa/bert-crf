@@ -34,6 +34,4 @@ class MaskedLanguageModelingDataset(td.Dataset):
         }
 
 
-__all__ = [
-    "MaskedLanguageModelingDataset"
-]
+__all__ = ["MaskedLanguageModelingDataset"]

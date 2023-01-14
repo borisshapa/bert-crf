@@ -3,11 +3,12 @@ import json
 import os.path
 from argparse import Namespace, ArgumentParser
 
+import numpy as np
 import torch
 from tqdm import tqdm
 
 from models.bert_crf import BertCrf
-from re_utils.common import load_jsonl
+from re_utils.common import load_jsonl, get_mean_vector_from_segment
 
 
 def configure_arg_parser():
@@ -30,18 +31,14 @@ def configure_arg_parser():
         default="resources/data/train/relations.jsonl",
         help="the path to the file with relations between entities",
     )
-    arg_parser.add_argument(
-        "--num-labels", type=int, default=17, help="number of possible tags for tokens"
-    )
+    arg_parser.add_argument("--num-labels", type=int, default=17, help="number of possible tags for tokens")
     arg_parser.add_argument(
         "--bert-name",
         type=str,
         default="sberbank-ai/ruBert-base",
         help="local path or hf hub BERT name that underlies the model",
     )
-    arg_parser.add_argument(
-        "--bert-dropout", type=float, default=0.2, help="dropout probability"
-    )
+    arg_parser.add_argument("--bert-dropout", type=float, default=0.2, help="dropout probability")
     arg_parser.add_argument(
         "--use-crf",
         type=bool,
@@ -85,6 +82,13 @@ def main(args: Namespace):
         label2id = json.load(label2id_file)
     id2label = {id: label for label, id in label2id.items()}
 
+    entity_tags_set = set()
+    for label, id in label2id.items():
+        if label == "O":
+            continue
+        entity_tags_set.add(label.split("-")[1])
+    entity_tag_to_id = {tag: id for id, tag in enumerate(entity_tags_set)}
+
     with open(args.retag2id, "r") as retag2id_file:
         retag2id = json.load(retag2id_file)
     no_relation_tag = len(retag2id)
@@ -92,22 +96,18 @@ def main(args: Namespace):
     tag_counter = {tag: 0 for tag in retag2id.values()}
     tag_counter[no_relation_tag] = 0
 
-    with open(
-        os.path.join(dir, "relation_training_data.jsonl"), "w"
-    ) as relation_training_data_file:
+    with open(os.path.join(dir, "relation_training_data.jsonl"), "w") as relation_training_data_file:
         for labeled_text, text_relations in tqdm(list(zip(labeled_texts, relations))):
             assert labeled_text["id"] == text_relations["id"]
             input_ids = torch.tensor([labeled_text["input_ids"]], device=device)
             attention_mask = torch.ones(1, len(labeled_text["input_ids"]), device=device)
 
-            _, batched_bert_embeddings = model.get_bert_features(
-                input_ids, attention_mask
-            )
+            _, batched_bert_embeddings = model.get_bert_features(input_ids, attention_mask)
             bert_embeddings = batched_bert_embeddings[0]
-            full_seq_embedding = bert_embeddings.mean(dim=0).tolist()
+            full_seq_embedding = get_mean_vector_from_segment(bert_embeddings, 0, len(bert_embeddings)).tolist()
             labels = model.decode(input_ids, attention_mask)[0]
 
-            labels_pos = []
+            tags_pos = []
             ind = 0
             while ind < len(labels):
                 if id2label[labels[ind]].startswith("B"):
@@ -117,43 +117,46 @@ def main(args: Namespace):
                     while ind < len(labels) and id2label[labels[ind]].startswith("I"):
                         ind += 1
                     end_pos = ind
-                    labels_pos.append({"tag": tag, "pos": [start_pos, end_pos]})
+                    tags_pos.append({"tag": tag, "pos": [start_pos, end_pos]})
                 else:
                     ind += 1
 
-            all_pairs = itertools.permutations(labels_pos, 2)
-            for first_arg, second_arg in all_pairs:
-                first_arg_embedding = bert_embeddings[
-                    first_arg["pos"][0] : first_arg["pos"][1]
-                ].mean(dim=0).tolist()
-                second_arg_embedding = bert_embeddings[
-                    second_arg["pos"][0] : second_arg["pos"][1]
-                ].mean(dim=0).tolist()
+            relation_matrix = np.empty((len(tags_pos), len(tags_pos)))
 
-                relation_tag = no_relation_tag
-                for relation in text_relations["relations"]:
-                    if (
-                        relation["arg1_tag"] == first_arg["tag"]
-                        and relation["arg2_tag"] == second_arg["tag"]
-                        and relation["arg1_pos"] == first_arg["pos"]
-                        and relation["arg2_pos"] == second_arg["pos"]
-                    ):
-                        relation_tag = relation["tag"]
-                        break
+            for i, first_arg in enumerate(tags_pos):
+                for j, second_arg in enumerate(tags_pos):
+                    relation_tag = no_relation_tag
+                    for relation in text_relations["relations"]:
+                        if (
+                            relation["arg1_tag"] == first_arg["tag"]
+                            and relation["arg2_tag"] == second_arg["tag"]
+                            and relation["arg1_pos"] == first_arg["pos"]
+                            and relation["arg2_pos"] == second_arg["pos"]
+                        ):
+                            relation_tag = relation["tag"]
+                            break
+                    relation_matrix[i][j] = relation_tag
 
-                tag_counter[relation_tag] += 1
-                json.dump(
-                    {
-                        "seq_emb": full_seq_embedding,
-                        "arg1_emb": first_arg_embedding,
-                        "arg2_emb": second_arg_embedding,
-                        "tag": relation_tag,
-                    },
-                    relation_training_data_file,
-                )
-                relation_training_data_file.write("\n")
+            entities_embeddings = [
+                get_mean_vector_from_segment(bert_embeddings, item["pos"][0], item["pos"][1]).tolist()
+                for item in tags_pos
+            ]
 
-    print(tag_counter)
+            entities_tags = [entity_tag_to_id[item["tag"]] for item in tags_pos]
+
+            json.dump(
+                {
+                    "seq_embedding": full_seq_embedding,
+                    "entities_embeddings": entities_embeddings,
+                    "relation_matrix": relation_matrix.tolist(),
+                    "entities_tags": entities_tags,
+                },
+                relation_training_data_file,
+            )
+            relation_training_data_file.write("\n")
+
+    with open(os.path.join(dir, "entity_tag_to_id.json"), "w") as entity_tag_to_id_file:
+        json.dump(entity_tag_to_id, entity_tag_to_id_file)
 
 
 if __name__ == "__main__":

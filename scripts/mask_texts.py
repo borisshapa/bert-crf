@@ -22,7 +22,7 @@ def configure_arg_parser():
         type=str,
         default="sberbank-ai/ruBert-base",
         help="The name of the tokenizer with which to tokenize the text. "
-             "This can be a tokenizer from the hf pub or a local path.",
+        "This can be a tokenizer from the hf pub or a local path.",
     )
     arg_parser.add_argument(
         "--max-seq-len",
@@ -34,13 +34,13 @@ def configure_arg_parser():
         "--masked-proba",
         type=float,
         default=0.15,
-        help="Probability for masked language modeling. Each token will be hidden with given probability."
+        help="Probability for masked language modeling. Each token will be hidden with given probability.",
     )
     arg_parser.add_argument(
         "--save-to",
         type=str,
         default="resources/data/train",
-        help="Directory where tokenized and labeled texts are saved."
+        help="Directory where tokenized and labeled texts are saved.",
     )
     return arg_parser
 
@@ -59,7 +59,7 @@ def main(args: Namespace):
             labels = []
             input_ids = []
 
-            for token in encoded["input_ids"][:args.max_seq_len]:
+            for token in encoded["input_ids"][: args.max_seq_len]:
                 labels.append(token)
 
                 if random.random() < args.masked_proba:
@@ -67,10 +67,7 @@ def main(args: Namespace):
                 else:
                     input_ids.append(token)
 
-            masked_texts.append({
-                "input_ids": input_ids,
-                "labels": labels
-            })
+            masked_texts.append({"input_ids": input_ids, "labels": labels})
 
     with open(os.path.join(args.save_to, "masked_texts.jsonl"), "w") as masked_text_file:
         for masked_text in masked_texts:

@@ -34,18 +34,14 @@ class BertCrf(nn.Module):
         nn.init.uniform_(self.end_transitions, -0.1, 0.1)
         nn.init.uniform_(self.transitions, -0.1, 0.1)
 
-    def _compute_log_denominator(
-        self, features: torch.Tensor, mask: torch.Tensor
-    ) -> torch.Tensor:
+    def _compute_log_denominator(self, features: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         seq_len = features.shape[0]
 
         log_score_over_all_seq = self.start_transitions + features[0]
 
         for i in range(1, seq_len):
             next_log_score_over_all_seq = torch.logsumexp(
-                log_score_over_all_seq.unsqueeze(2)
-                + self.transitions
-                + features[i].unsqueeze(1),
+                log_score_over_all_seq.unsqueeze(2) + self.transitions + features[i].unsqueeze(1),
                 dim=1,
             )
             log_score_over_all_seq = torch.where(
@@ -56,19 +52,14 @@ class BertCrf(nn.Module):
         log_score_over_all_seq += self.end_transitions
         return torch.logsumexp(log_score_over_all_seq, dim=1)
 
-    def _compute_log_numerator(
-        self, features: torch.Tensor, labels: torch.Tensor, mask: torch.Tensor
-    ) -> torch.Tensor:
+    def _compute_log_numerator(self, features: torch.Tensor, labels: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         seq_len, bs, _ = features.shape
 
-        score_over_seq = (
-            self.start_transitions[labels[0]] + features[0, torch.arange(bs), labels[0]]
-        )
+        score_over_seq = self.start_transitions[labels[0]] + features[0, torch.arange(bs), labels[0]]
 
         for i in range(1, seq_len):
             score_over_seq += (
-                self.transitions[labels[i - 1], labels[i]]
-                + features[i, torch.arange(bs), labels[i]]
+                self.transitions[labels[i - 1], labels[i]] + features[i, torch.arange(bs), labels[i]]
             ) * mask[i]
         seq_lens = mask.sum(dim=0) - 1
         last_tags = labels[seq_lens.long(), torch.arange(bs)]
@@ -78,9 +69,7 @@ class BertCrf(nn.Module):
     def get_bert_features(
         self, input_ids: torch.Tensor, attention_mask: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        hidden = self.bert(input_ids, attention_mask=attention_mask)[
-            "last_hidden_state"
-        ]
+        hidden = self.bert(input_ids, attention_mask=attention_mask)["last_hidden_state"]
         hidden = self.dropout(hidden)
         return self.hidden2label(hidden), hidden
 
@@ -90,9 +79,7 @@ class BertCrf(nn.Module):
         attention_mask: torch.Tensor,
         labels: torch.Tensor,
     ) -> torch.Tensor:
-        features, _ = self.get_bert_features(
-            input_ids=input_ids, attention_mask=attention_mask
-        )
+        features, _ = self.get_bert_features(input_ids=input_ids, attention_mask=attention_mask)
         attention_mask = attention_mask.bool()
 
         if self.use_crf:
@@ -100,12 +87,8 @@ class BertCrf(nn.Module):
             attention_mask = torch.swapaxes(attention_mask, 0, 1)
             labels = torch.swapaxes(labels, 0, 1)
 
-            log_numerator = self._compute_log_numerator(
-                features=features, labels=labels, mask=attention_mask
-            )
-            log_denominator = self._compute_log_denominator(
-                features=features, mask=attention_mask
-            )
+            log_numerator = self._compute_log_numerator(features=features, labels=labels, mask=attention_mask)
+            log_denominator = self._compute_log_denominator(features=features, mask=attention_mask)
 
             return torch.mean(log_denominator - log_numerator)
         else:
@@ -114,9 +97,7 @@ class BertCrf(nn.Module):
                 torch.where(attention_mask.bool(), labels, -100).flatten(end_dim=1),
             )
 
-    def _viterbi_decode(
-        self, features: torch.Tensor, mask: torch.Tensor
-    ) -> List[List[int]]:
+    def _viterbi_decode(self, features: torch.Tensor, mask: torch.Tensor) -> List[List[int]]:
         seq_len, bs, _ = features.shape
 
         log_score_over_all_seq = self.start_transitions + features[0]
@@ -125,14 +106,10 @@ class BertCrf(nn.Module):
 
         for i in range(1, seq_len):
             next_log_score_over_all_seq = (
-                log_score_over_all_seq.unsqueeze(2)
-                + self.transitions
-                + features[i].unsqueeze(1)
+                log_score_over_all_seq.unsqueeze(2) + self.transitions + features[i].unsqueeze(1)
             )
 
-            next_log_score_over_all_seq, indices = next_log_score_over_all_seq.max(
-                dim=1
-            )
+            next_log_score_over_all_seq, indices = next_log_score_over_all_seq.max(dim=1)
 
             log_score_over_all_seq = torch.where(
                 mask[i].unsqueeze(1),
@@ -159,12 +136,8 @@ class BertCrf(nn.Module):
 
         return best_paths
 
-    def decode(
-        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
-    ) -> List[List[int]]:
-        features, _ = self.get_bert_features(
-            input_ids=input_ids, attention_mask=attention_mask
-        )
+    def decode(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> List[List[int]]:
+        features, _ = self.get_bert_features(input_ids=input_ids, attention_mask=attention_mask)
         attention_mask = attention_mask.bool()
 
         if self.use_crf:

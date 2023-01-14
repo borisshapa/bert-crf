@@ -95,7 +95,7 @@ def train_ner(
         for batch in tqdm(train_data_loader):
             step += 1
 
-            model.zero_grad()
+            optimizer.zero_grad()
 
             batch = dict_to_device(batch, device)
 
@@ -118,12 +118,8 @@ def train_ner(
 
                         prediction = model.decode(**batch)
 
-                        flatten_prediction = [
-                            item for sublist in prediction for item in sublist
-                        ]
-                        flatten_labels = torch.masked_select(
-                            labels, batch["attention_mask"].bool()
-                        ).tolist()
+                        flatten_prediction = [item for sublist in prediction for item in sublist]
+                        flatten_labels = torch.masked_select(labels, batch["attention_mask"].bool()).tolist()
 
                         predictions.extend(flatten_prediction)
                         ground_truth.extend(flatten_labels)

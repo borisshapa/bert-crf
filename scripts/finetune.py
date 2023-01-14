@@ -24,57 +24,30 @@ def configure_arg_parser():
         "--model-name",
         type=str,
         default="sberbank-ai/ruBert-base",
-        help="The name of the model. "
-             "This can be a model from the Hugging Face pub or a local path.",
+        help="The name of the model. " "This can be a model from the Hugging Face pub or a local path.",
     )
+    arg_parser.add_argument("--device", type=str, default="cpu", help="Device which is used for training")
+    arg_parser.add_argument("--epochs", type=int, default=10, help="Amount of epochs to train")
+    arg_parser.add_argument("--lr", type=float, default=1e-5, help="Learning rate of AdamW optimizer. (default: 1e-5)")
     arg_parser.add_argument(
-        "--device",
-        type=str,
-        default="cpu",
-        help="Device which is used for training"
-    )
-    arg_parser.add_argument(
-        "--epochs",
-        type=int,
-        default=10,
-        help="Amount of epochs to train"
-    )
-    arg_parser.add_argument(
-        "--lr",
-        type=float,
-        default=1e-5,
-        help="Learning rate of AdamW optimizer. (default: 1e-5)"
-    )
-    arg_parser.add_argument(
-        "--lr-gamma",
-        type=float,
-        default=0.99,
-        help="StepLR scheduler gamma coefficient. (default: 0.99)"
+        "--lr-gamma", type=float, default=0.99, help="StepLR scheduler gamma coefficient. (default: 0.99)"
     )
     arg_parser.add_argument(
         "--lr-step-size",
         type=int,
         default=30,
         help="StepLR scheduler step size, after given amount of steps will multiple learning rate by given gamma. "
-             "(default: 30)"
+        "(default: 30)",
     )
     arg_parser.add_argument(
-        "--valid-size",
-        type=float,
-        default=0.15,
-        help="Validation dataset percentage size. (default: 0.15)"
+        "--valid-size", type=float, default=0.15, help="Validation dataset percentage size. (default: 0.15)"
     )
-    arg_parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=128,
-        help="Batch size. (default: 128)"
-    )
+    arg_parser.add_argument("--batch-size", type=int, default=128, help="Batch size. (default: 128)")
     arg_parser.add_argument(
         "--save-to",
         type=str,
         default="resources/data/train",
-        help="Directory where tokenized and labeled texts are saved."
+        help="Directory where tokenized and labeled texts are saved.",
     )
     return arg_parser
 
@@ -89,10 +62,12 @@ def main(args: Namespace):
     train_dataset = Subset(dataset, train_indices)
     valid_dataset = Subset(dataset, valid_indices)
 
-    train_loader = td.DataLoader(train_dataset, shuffle=True, batch_size=args.batch_size,
-                                 collate_fn=dataset.collate_function)
-    valid_loader = td.DataLoader(valid_dataset, shuffle=False, batch_size=args.batch_size,
-                                 collate_fn=dataset.collate_function)
+    train_loader = td.DataLoader(
+        train_dataset, shuffle=True, batch_size=args.batch_size, collate_fn=dataset.collate_function
+    )
+    valid_loader = td.DataLoader(
+        valid_dataset, shuffle=False, batch_size=args.batch_size, collate_fn=dataset.collate_function
+    )
 
     bert = transformers.BertForMaskedLM.from_pretrained(args.model_name).to(args.device)
     optimizer = torch.optim.AdamW(bert.parameters(), lr=args.lr)
@@ -119,11 +94,11 @@ def main(args: Namespace):
 
 
 def epoch(
-        model: transformers.BertForMaskedLM,
-        optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler.StepLR,
-        train_loader: td.DataLoader,
-        valid_loader: td.DataLoader
+    model: transformers.BertForMaskedLM,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.StepLR,
+    train_loader: td.DataLoader,
+    valid_loader: td.DataLoader,
 ):
     train_loss, valid_loss = 0, 0
 

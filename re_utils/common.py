@@ -1,4 +1,5 @@
 import json
+import torch
 from dataclasses import dataclass
 from typing import List, TypeVar, Callable, Any
 
@@ -29,9 +30,7 @@ class ReAnnotation:
 T = TypeVar("T")
 
 
-def lower_bound(
-    arr: List[T], element: float, key: Callable[[T], float] = lambda x: x
-) -> int:
+def lower_bound(arr: List[T], element: float, key: Callable[[T], float] = lambda x: x) -> int:
     left = -1
     right = len(arr)
 
@@ -45,9 +44,7 @@ def lower_bound(
     return right
 
 
-def upper_bound(
-    arr: List[T], element: float, key: Callable[[T], float] = lambda x: x
-) -> int:
+def upper_bound(arr: List[T], element: float, key: Callable[[T], float] = lambda x: x) -> int:
     left = -1
     right = len(arr)
 
@@ -61,9 +58,7 @@ def upper_bound(
     return right
 
 
-def binary_search(
-    arr: List[T], element: float, key: Callable[[T], float] = lambda x: x
-) -> int:
+def binary_search(arr: List[T], element: float, key: Callable[[T], float] = lambda x: x) -> int:
     left = -1
     right = len(arr)
 
@@ -97,3 +92,7 @@ def save_jsonl(obj: List[Any], file: str):
 def save_json(obj: Any, file: str):
     with open(file, "w") as json_file:
         json.dump(obj, json_file)
+
+
+def get_mean_vector_from_segment(embeddings: torch.Tensor, start_pos: int, end_pos: int) -> torch.Tensor:
+    return embeddings[start_pos:end_pos].mean(dim=0)

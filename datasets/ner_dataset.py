@@ -6,6 +6,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 
+
 class NerDataset(Dataset):
     def __init__(self, tokenized_texts_path: str):
         self.tokenized_texts = []
@@ -19,9 +20,7 @@ class NerDataset(Dataset):
     def __getitem__(self, index) -> Dict[str, List]:
         return self.tokenized_texts[index]
 
-    def collate_function(
-        self, batch: List[Dict[str, torch.Tensor]]
-    ) -> Dict[str, torch.Tensor]:
+    def collate_function(self, batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
         input_ids = [torch.tensor(item["input_ids"]) for item in batch]
         labels = [torch.tensor(item["labels"]) for item in batch]
         attention_mask = [torch.ones(len(item)) for item in input_ids]

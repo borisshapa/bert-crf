@@ -112,9 +112,7 @@ def main(args: Namespace):
                     ner_annotations.append(ner_annotation)
 
                     labels_set.add(f"{FIRST_TOKEN_TAG_PREFIX}-{ner_annotation.tag}")
-                    labels_set.add(
-                        f"{SUBSEQUENT_TOKEN_TAG_PREFIX}-{ner_annotation.tag}"
-                    )
+                    labels_set.add(f"{SUBSEQUENT_TOKEN_TAG_PREFIX}-{ner_annotation.tag}")
                 else:
                     annotation_id, tag, arg1, arg2 = annotation_data
 
@@ -124,9 +122,7 @@ def main(args: Namespace):
                     arg1 = get_arg_name(arg1)
                     arg2 = get_arg_name(arg2)
 
-                    re_annotations.append(
-                        ReAnnotation(id=annotation_id, tag=tag, arg1=arg1, arg2=arg2)
-                    )
+                    re_annotations.append(ReAnnotation(id=annotation_id, tag=tag, arg1=arg1, arg2=arg2))
                     retags_set.add(tag)
 
         id2annotation = {ann.id: ann for ann in ner_annotations}
@@ -136,9 +132,7 @@ def main(args: Namespace):
             start_ch_pos = id2annotation[id].start_ch_pos
             end_ch_pos = id2annotation[id].end_ch_pos
 
-            start_word_pos_ind = upper_bound(
-                tokenized_text_spans, start_ch_pos, key=lambda x: x[0]
-            )
+            start_word_pos_ind = upper_bound(tokenized_text_spans, start_ch_pos, key=lambda x: x[0])
             start_word_pos_ind -= 1
             start = tokenized_text_spans[start_word_pos_ind][0]
             if start != start_ch_pos:
@@ -146,9 +140,7 @@ def main(args: Namespace):
                 tokenized_text_spans[start_word_pos_ind] = (start, start_ch_pos)
                 tokenized_text_spans.insert(start_word_pos_ind + 1, (start_ch_pos, end))
 
-            end_word_pos_ind = lower_bound(
-                tokenized_text_spans, end_ch_pos, lambda x: x[1]
-            )
+            end_word_pos_ind = lower_bound(tokenized_text_spans, end_ch_pos, lambda x: x[1])
             end = tokenized_text_spans[end_word_pos_ind][1]
             if tokenized_text_spans[end_word_pos_ind][1] != end_ch_pos:
                 start = tokenized_text_spans[end_word_pos_ind][0]
@@ -172,18 +164,12 @@ def main(args: Namespace):
         words_ids_for_tokens = encoded.word_ids()
 
         for id in id2annotation.keys():
-            id2annotation[id].start_token_pos = lower_bound(
-                words_ids_for_tokens, id2annotation[id].start_word_pos
-            )
-            id2annotation[id].end_token_pos = upper_bound(
-                words_ids_for_tokens, id2annotation[id].end_word_pos
-            )
+            id2annotation[id].start_token_pos = lower_bound(words_ids_for_tokens, id2annotation[id].start_word_pos)
+            id2annotation[id].end_token_pos = upper_bound(words_ids_for_tokens, id2annotation[id].end_word_pos)
 
         text_labels = ["O"] * len(input_ids)
         for annotation in id2annotation.values():
-            text_labels[
-                annotation.start_token_pos
-            ] = f"{FIRST_TOKEN_TAG_PREFIX}-{annotation.tag}"
+            text_labels[annotation.start_token_pos] = f"{FIRST_TOKEN_TAG_PREFIX}-{annotation.tag}"
             for i in range(annotation.start_token_pos + 1, annotation.end_token_pos):
                 text_labels[i] = f"{SUBSEQUENT_TOKEN_TAG_PREFIX}-{annotation.tag}"
 
@@ -197,14 +183,10 @@ def main(args: Namespace):
         relations_count = 0
         for token_ind in range(len(input_ids)):
             is_new_word = words_ids_for_tokens[token_ind] is None or (
-                token_ind > 0
-                and words_ids_for_tokens[token_ind]
-                != words_ids_for_tokens[token_ind - 1]
+                token_ind > 0 and words_ids_for_tokens[token_ind] != words_ids_for_tokens[token_ind - 1]
             )
 
-            is_not_subseq_label = text_labels[
-                token_ind
-            ] == NOT_A_NAMED_ENTITY or text_labels[token_ind].startswith("B")
+            is_not_subseq_label = text_labels[token_ind] == NOT_A_NAMED_ENTITY or text_labels[token_ind].startswith("B")
 
             if is_new_word and is_not_subseq_label:
                 dump["input_ids"].extend(current_seq_ids.copy())
@@ -223,18 +205,10 @@ def main(args: Namespace):
 
                     arg1_tag = id2annotation[arg1].tag
                     arg2_tag = id2annotation[arg2].tag
-                    start_token_arg1 = (
-                        id2annotation[arg1].start_token_pos - total_token_dumped
-                    )
-                    end_token_arg1 = (
-                        id2annotation[arg1].end_token_pos - total_token_dumped
-                    )
-                    start_token_arg2 = (
-                        id2annotation[arg2].start_token_pos - total_token_dumped
-                    )
-                    end_token_arg2 = (
-                        id2annotation[arg2].end_token_pos - total_token_dumped
-                    )
+                    start_token_arg1 = id2annotation[arg1].start_token_pos - total_token_dumped
+                    end_token_arg1 = id2annotation[arg1].end_token_pos - total_token_dumped
+                    start_token_arg2 = id2annotation[arg2].start_token_pos - total_token_dumped
+                    end_token_arg2 = id2annotation[arg2].end_token_pos - total_token_dumped
 
                     token_in_dump = len(dump["input_ids"])
                     if (
@@ -271,9 +245,7 @@ def main(args: Namespace):
     retag2id = get_mapping_to_id(args.retag2id, retags_set)
 
     for i in range(len(tokenized_texts)):
-        tokenized_texts[i]["labels"] = [
-            label2id[label] for label in tokenized_texts[i]["text_labels"]
-        ]
+        tokenized_texts[i]["labels"] = [label2id[label] for label in tokenized_texts[i]["text_labels"]]
     for i in range(len(relations)):
         for j in range(len(relations[i]["relations"])):
             relations[i]["relations"][j]["tag"] = retag2id[relations[i]["relations"][j]["re_tag"]]
