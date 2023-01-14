@@ -1,5 +1,4 @@
 import json
-import torch
 from dataclasses import dataclass
 from typing import List, TypeVar, Callable, Any
 
@@ -94,5 +93,7 @@ def save_json(obj: Any, file: str):
         json.dump(obj, json_file)
 
 
-def get_mean_vector_from_segment(embeddings: torch.Tensor, start_pos: int, end_pos: int) -> torch.Tensor:
-    return embeddings[start_pos:end_pos].mean(dim=0)
+def load_json(path: str):
+    with open(path, "r") as file:
+        data = json.load(file)
+    return data

@@ -13,7 +13,7 @@ class ReBertCrf(nn.Module):
         num_re_tags: int,
         hidden_size: int,
         dropout: float,
-        entity_tag_to_id_path: str,
+        entity_tag_to_id: Dict[str, int],
     ):
         super().__init__()
 
@@ -22,9 +22,6 @@ class ReBertCrf(nn.Module):
         self.all_seq_linear = self.__get_dropour_relu_linear(hidden_size, hidden_size, dropout)
 
         self.relation_classifier = nn.Sequential(nn.Dropout(dropout), nn.Linear(3 * hidden_size, num_re_tags))
-
-        with open(entity_tag_to_id_path, "r") as entity_tag_to_id_file:
-            entity_tag_to_id = json.load(entity_tag_to_id_file)
 
         self.tag_embeddings = nn.Embedding(num_embeddings=len(entity_tag_to_id), embedding_dim=hidden_size)
 
@@ -58,13 +55,3 @@ class ReBertCrf(nn.Module):
         )
         predictions = self.relation_classifier(concatenated_embeddings)
         return predictions
-
-
-if __name__ == "__main__":
-    dataset = EmbeddingsAndRelationsDataset("resources/data/train/relation_training_data.jsonl")
-    data_loader = DataLoader(dataset, batch_size=4, collate_fn=dataset.collate_function)
-    batch = next(iter(data_loader))
-
-    model = ReBertCrf(11, 768, 0.2, "resources/data/train/entity_tag_to_id.json")
-    out = model(**batch)
-    # print(out)

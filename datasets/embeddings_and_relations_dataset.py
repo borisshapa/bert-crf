@@ -1,19 +1,19 @@
 import json
-
-import torch
-from torch.utils.data import IterableDataset, DataLoader
-from torch.nn.utils.rnn import pad_sequence
-import torch.nn.functional as F
 from collections import defaultdict
 from typing import List, Dict
+
+import torch
+import torch.nn.functional as F
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import IterableDataset, DataLoader
 
 
 class EmbeddingsAndRelationsDataset(IterableDataset):
     FLOAT_KEYS = ["seq_embedding", "entities_embeddings"]
-    INT_KEYS = ["relation_matrix", "entities_tags"]
+    INT_KEYS = ["relation_matrix", "entities_tags", "entities_positions"]
 
-    def __init__(self, relation_training_data_path):
-        self.relation_training_data_path = relation_training_data_path
+    def __init__(self, re_data_path):
+        self.re_data_path = re_data_path
 
     def line_mapper(self, line):
         item = json.loads(line)
@@ -24,7 +24,7 @@ class EmbeddingsAndRelationsDataset(IterableDataset):
         return item
 
     def __iter__(self):
-        file_iter = open(self.relation_training_data_path, "r")
+        file_iter = open(self.re_data_path, "r")
         mapped_iter = map(self.line_mapper, file_iter)
         return mapped_iter
 
@@ -34,12 +34,16 @@ class EmbeddingsAndRelationsDataset(IterableDataset):
             for key, value in item.items():
                 key2list[key].append(value)
 
-        for i, item in enumerate(key2list["entities_embeddings"]):
-            if item.shape[0] == 0:
-                key2list["entities_embeddings"][i] = torch.zeros(1, 768)
-        for i, item in enumerate(key2list["entities_tags"]):
-            if item.shape[0] == 0:
-                key2list["entities_tags"][i] = torch.tensor([0])
+        ids = torch.tensor(key2list["id"], dtype=torch.long)
+        del key2list["id"]
+
+        key2item_shape = {"entities_embeddings": (1, 768), "entities_tags": (1), "entities_positions": (1, 2)}
+        for key, item_shape in key2item_shape.items():
+            for i in range(len(key2list[key])):
+                if key2list[key][i].shape[0] == 0:
+                    key2list[key][i] = torch.zeros(
+                        item_shape, dtype=torch.float if key in self.FLOAT_KEYS else torch.int
+                    )
 
         max_matrix_shape = max(key2list["relation_matrix"], key=lambda x: x.shape[0]).shape[0]
         for i, matrix in enumerate(key2list["relation_matrix"]):
@@ -50,13 +54,7 @@ class EmbeddingsAndRelationsDataset(IterableDataset):
                 else F.pad(matrix, (0, diff, 0, diff), "constant", -100)
             )
 
-        key2tensor = {}
+        key2tensor = {"id": ids}
         for key, value in key2list.items():
             key2tensor[key] = pad_sequence(value, batch_first=True)
         return key2tensor
-
-
-if __name__ == "__main__":
-    dataset = EmbeddingsAndRelationsDataset("resources/data/train/relation_training_data.jsonl")
-    data_loader = DataLoader(dataset, batch_size=16, collate_fn=dataset.collate_function)
-    print(next(iter(data_loader)))

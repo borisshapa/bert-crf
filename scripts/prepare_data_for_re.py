@@ -1,4 +1,3 @@
-import itertools
 import json
 import os.path
 from argparse import Namespace, ArgumentParser
@@ -8,7 +7,8 @@ import torch
 from tqdm import tqdm
 
 from models.bert_crf import BertCrf
-from re_utils.common import load_jsonl, get_mean_vector_from_segment
+from re_utils.common import load_jsonl
+from re_utils.ner import get_tags_with_positions, get_mean_vector_from_segment
 
 
 def configure_arg_parser():
@@ -96,7 +96,7 @@ def main(args: Namespace):
     tag_counter = {tag: 0 for tag in retag2id.values()}
     tag_counter[no_relation_tag] = 0
 
-    with open(os.path.join(dir, "relation_training_data.jsonl"), "w") as relation_training_data_file:
+    with open(os.path.join(dir, "re_data.jsonl"), "w") as relation_training_data_file:
         for labeled_text, text_relations in tqdm(list(zip(labeled_texts, relations))):
             assert labeled_text["id"] == text_relations["id"]
             input_ids = torch.tensor([labeled_text["input_ids"]], device=device)
@@ -107,19 +107,7 @@ def main(args: Namespace):
             full_seq_embedding = get_mean_vector_from_segment(bert_embeddings, 0, len(bert_embeddings)).tolist()
             labels = model.decode(input_ids, attention_mask)[0]
 
-            tags_pos = []
-            ind = 0
-            while ind < len(labels):
-                if id2label[labels[ind]].startswith("B"):
-                    tag = id2label[labels[ind]].split("-")[1]
-                    start_pos = ind
-                    ind += 1
-                    while ind < len(labels) and id2label[labels[ind]].startswith("I"):
-                        ind += 1
-                    end_pos = ind
-                    tags_pos.append({"tag": tag, "pos": [start_pos, end_pos]})
-                else:
-                    ind += 1
+            tags_pos = get_tags_with_positions(labels, id2label)
 
             relation_matrix = np.empty((len(tags_pos), len(tags_pos)))
 
@@ -137,19 +125,21 @@ def main(args: Namespace):
                             break
                     relation_matrix[i][j] = relation_tag
 
+            entities_positions = [item["pos"] for item in tags_pos]
             entities_embeddings = [
-                get_mean_vector_from_segment(bert_embeddings, item["pos"][0], item["pos"][1]).tolist()
-                for item in tags_pos
+                get_mean_vector_from_segment(bert_embeddings, pos[0], pos[1]).tolist() for pos in entities_positions
             ]
 
             entities_tags = [entity_tag_to_id[item["tag"]] for item in tags_pos]
 
             json.dump(
                 {
+                    "id": labeled_text["id"],
                     "seq_embedding": full_seq_embedding,
                     "entities_embeddings": entities_embeddings,
                     "relation_matrix": relation_matrix.tolist(),
                     "entities_tags": entities_tags,
+                    "entities_positions": entities_positions,
                 },
                 relation_training_data_file,
             )
