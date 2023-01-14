@@ -1,8 +1,34 @@
-## BERT-CRF for [RuREBus](https://github.com/dialogue-evaluation/RuREBus.git)
+# BERT + CRF for [RuREBus](https://github.com/dialogue-evaluation/RuREBus.git)
 
 The main goal of this task is to train BERT-CRF model for solving Named Entity Recognition and Relation Extraction tasks
-on RuREBus dataset (_Russian Relation Extraction for Business_)
+on RuREBus dataset (_Russian Relation Extraction for Business_).
 
+![](resources/images/general_scheme.png)
+
+## Structure
+* [`datasets`](./datasets) – implementations of torch datasets.
+* [`models`](./models) – models implementation (bert+crf, classifier for RE task solving)
+* [`re_utils`](./re_utils) – various useful utilities (e.g. for working with files, ner data structure, for training models).
+* [`resources`](./resources) – materials for the design of the repository, it is also supposed to store data there for training and testing models.
+* [`RuREBus`](https://github.com/dialogue-evaluation/RuREBus.git) – repository with original task.
+* [`scripts`](./scripts) – scripts for preparing data to training and evaluation.
+* [`ner_experiments.ipynb`](./ner_experiments.ipynb) – training different models to solve NER task.
+* [`re_experiments.ipynb`](./re_experiments.ipynb) – training model to solve RE task.
+
+## Requirements
+
+Create virtual environment with `venv` or `conda` and install requirements:
+
+```shell
+pip install -r requirements.txt
+```
+
+Or build and run docker container:
+```shell
+./run_docker.sh
+```
+
+==========================
 ### RuREBus dataset preprocessing
 
 ```shell
