@@ -1,12 +1,13 @@
 from typing import Dict, List, Optional
 
 import torch
+from IPython import display
 from matplotlib import pyplot as plt
 from sklearn.metrics import f1_score
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from IPython import display
+
 from datasets import NerDataset
 from models.bert_crf import BertCrf
 

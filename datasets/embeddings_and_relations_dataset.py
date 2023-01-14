@@ -28,9 +28,7 @@ class EmbeddingsAndRelationsDataset(IterableDataset):
         mapped_iter = map(self.line_mapper, file_iter)
         return mapped_iter
 
-    def collate_function(
-        self, batch: List[Dict[str, torch.Tensor]]
-    ) -> Dict[str, torch.Tensor]:
+    def collate_function(self, batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
         key2list = defaultdict(list)
         for item in batch:
             for key, value in item.items():
@@ -43,9 +41,7 @@ class EmbeddingsAndRelationsDataset(IterableDataset):
             if item.shape[0] == 0:
                 key2list["entities_tags"][i] = torch.tensor([0])
 
-        max_matrix_shape = max(
-            key2list["relation_matrix"], key=lambda x: x.shape[0]
-        ).shape[0]
+        max_matrix_shape = max(key2list["relation_matrix"], key=lambda x: x.shape[0]).shape[0]
         for i, matrix in enumerate(key2list["relation_matrix"]):
             diff = max_matrix_shape - matrix.shape[0]
             key2list["relation_matrix"][i] = (
@@ -61,10 +57,6 @@ class EmbeddingsAndRelationsDataset(IterableDataset):
 
 
 if __name__ == "__main__":
-    dataset = EmbeddingsAndRelationsDataset(
-        "resources/data/train/relation_training_data.jsonl"
-    )
-    data_loader = DataLoader(
-        dataset, batch_size=16, collate_fn=dataset.collate_function
-    )
+    dataset = EmbeddingsAndRelationsDataset("resources/data/train/relation_training_data.jsonl")
+    data_loader = DataLoader(dataset, batch_size=16, collate_fn=dataset.collate_function)
     print(next(iter(data_loader)))
