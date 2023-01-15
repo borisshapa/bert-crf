@@ -83,13 +83,18 @@ This script creates 4 files in the same directory as the text and annotation dat
 
 The outputs of the [BERT](https://arxiv.org/abs/1810.04805) model pretrained on the corpus of business texts are processed using [Conditional Random Field](https://arxiv.org/pdf/1011.4088.pdf).
 
-The essence of CRF is to build a probabilistic model $$p(s_1...s_m|x_1...x_m) = p(\overrightarrow{s}|\overrightarrow{x})$$, where $s_i$ – token label, $x_i$ – token embedding obtained using BERT.
+The essence of CRF is to build a probabilistic model $$p(s_1...s_m|x_1...x_m) = p(\overrightarrow{s}|\overrightarrow{x})$$ where $s_i$ – token label, $x_i$ – token embedding obtained using BERT.
 
 The key idea of CRF is the definition of a feature vector $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{s}) \in \mathbb{R}^d$$
 
 The function maps a pair of the input sequence and the label sequence to some feature vector in d-dimensional space.
 
-The probabilistic model is built as follows: $$p(\overrightarrow{s}|\overrightarrow{x}) = \frac{\exp(\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{s}))}{\sum\limits_{\overrightarrow{s' \in \mathcal{S}}}}$$
+The probabilistic model is built as follows: $$p(\overrightarrow{s}|\overrightarrow{x}) = \frac{\exp(\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{s}))}{\sum\limits_{\overrightarrow{s'} \in \mathcal{S}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{s'}))}$$
+where $\mathcal{S}^m$ – the set of all possible token label sequences.
+
+The function $\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{s})$ is defined as follows: $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{s}) = \sum\limits_{i=1}^m \log \psi_i(\overrightarrow{x}, i, s_{i - 1}, s_i)$$
+
+
 
 ## Relation Extraction
 
