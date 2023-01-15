@@ -81,6 +81,10 @@ This script creates 4 files in the same directory as the text and annotation dat
 
 ### Models
 
+The outputs of the [BERT](https://arxiv.org/abs/1810.04805) model pretrained on the corpus of business texts are processed using [Conditional Random Field](https://arxiv.org/pdf/1011.4088.pdf).
+
+$$\overrightarrow{a}$$
+
 ## Relation Extraction
 
 ==========================
