@@ -83,7 +83,9 @@ This script creates 4 files in the same directory as the text and annotation dat
 
 The outputs of the [BERT](https://arxiv.org/abs/1810.04805) model pretrained on the corpus of business texts are processed using [Conditional Random Field](https://arxiv.org/pdf/1011.4088.pdf).
 
-$$\overrightarrow{a}$$
+The essence of CRF is to build a probabilistic model $$p(s_1...s_m|x_1...x_m) = p(\overrightarrow{s}|\overrightarrow{x})$$, where $$s_i$$ – token label, $$x_i$$ – token embedding obtained using BERT.
+
+The key idea of CRF is the definition of a feature vector $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{s}) \in {\Bbb R}^d$$
 
 ## Relation Extraction
 
