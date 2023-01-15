@@ -81,19 +81,34 @@ This script creates 4 files in the same directory as the text and annotation dat
 
 ### Models
 
-The outputs of the [BERT](https://arxiv.org/abs/1810.04805) model pretrained on the corpus of business texts are processed using [Conditional Random Field](https://arxiv.org/pdf/1011.4088.pdf).
+The outputs of the [BERT](https://arxiv.org/abs/1810.04805) model pretrained on the corpus of business texts are processed using [Conditional Random Field](http://www.cs.columbia.edu/~mcollins/crf.pdf).
 
-The essence of CRF is to build a probabilistic model $$p(s_1...s_m|x_1...x_m) = p(\overrightarrow{s}|\overrightarrow{x})$$ where $s_i$ – token label, $x_i$ – token embedding obtained using BERT.
+The essence of CRF is to build a probabilistic model $$p(y_1...y_m|x_1...x_m) = p(\overrightarrow{y}|\overrightarrow{x})$$ where $y_i$ – token label, $x_i$ – token embedding obtained using BERT.
 
-The key idea of CRF is the definition of a feature vector $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{s}) \in \mathbb{R}^d$$
+The key idea of CRF is the definition of a feature vector $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}) \in \mathbb{R}^d$$
 
 The function maps a pair of the input sequence and the label sequence to some feature vector in d-dimensional space.
 
-The probabilistic model is built as follows: $$p(\overrightarrow{s}|\overrightarrow{x}) = \frac{\exp(\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{s}))}{\sum\limits_{\overrightarrow{s'} \in \mathcal{S}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{s'}))}$$
-where $\mathcal{S}^m$ – the set of all possible token label sequences.
+The probabilistic model is built as follows: $$p(\overrightarrow{y}|\overrightarrow{x}) = \frac{\exp(\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}))}{\sum\limits_{\overrightarrow{y'} \in \mathcal{Y}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'}))}$$
+where $\mathcal{Y}^m$ – the set of all possible token label sequences.
 
-The function $\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{s})$ is defined as follows: $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{s}) = \sum\limits_{i=1}^m \log \psi_i(\overrightarrow{x}, i, s_{i - 1}, s_i)$$
+The function $\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y})$ is defined as follows: $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}) = \sum\limits_{i=1}^m \log \psi_i(\overrightarrow{x}, i, y_{i - 1}, y_i)$$
 
+$\log \psi_i$ consists of two parts: the first is the value of the corresponding logit that comes from BERT's embeddings, and the second is the transition potential from the previous $s$ value to the new one. This value is obtained from a square matrix of learning parameters with a side of size `num type of labels`.
+
+$$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}) = \sum\limits_{i=1}^m \log \psi_{\texttt{EMIT}} (y_i \rightarrow x_i)  + \log \psi_{\texttt{TRANS}} (y_{i - 1} \rightarrow y_i)$$
+
+During training, negative log-likelihood is minimized:
+$$\texttt{NLL} = - \sum\limits_{i = 1}^n \log(p(\overrightarrow{y}^i | \overrightarrow{x}^i))$$
+where $x_i$, $y_i$ is an $i^{th}$ example from the training set.
+
+The question is how to effectively calculate the sum over all possible sequences $y'$ in the denominator. This is done using dynamic programming.
+
+Let $\pi[i][y]$ be logarith of the sum of all label sequences $\log\sum\limits_{\overrightarrow{y'} \in \mathcal{Y}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'}))$ of length $i + 1$ ( $i \in \{ 0,...,m \} $)  ending in a label $y$. Then 
+
+$$\overrightarrow{\pi[0]} = \overrightarrow{tr_{\texttt{start}}} + \overrightarrow{x_0}$$
+
+The calculation for the indices 1..m will be better understood from the figure:
 
 
 ## Relation Extraction
