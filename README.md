@@ -292,10 +292,11 @@ Our finetunned BERT with CRF layer shows the best f1-micro score.
 #### Honset F1
 Since the text was broken into pieces no larger than 512 tokens, for some relations the arguments ended up in different pieces of text.
 For the test dataset, there were _248_ such lost relationships. We consider them undetected by the model and assign them to `false negative`.
+The remaining `false negative` examples were calculated by comparing the file `relations.jsonl` with the relation matrix predicted by the model.
 
 `true positive` and `false positive` were calculated by comparing predicted relation matrix with ground truth relation matrix from `re_data.jsonl` file.
 
-$$\texttt{F1} = \frac{\texttt{true positive}}{\texttt{true_positive} + \frac{1}{2} \cdot (\texttt{false positive} + \texttt{false negative})}$$
+$$\texttt{F1} = \frac{\texttt{true positive}}{\texttt{true positive} + \frac{1}{2} \cdot (\texttt{false positive} + \texttt{false negative})}$$
 
 ![](resources/images/re_f1.png)
 
