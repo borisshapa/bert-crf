@@ -157,7 +157,7 @@ def compute_log_denominator(self, x: torch.Tensor) -> torch.Tensor:
 
 #### Decoding with CRF
 
-To get a sequence of labels for tokens from the hidden representation of the BERT $\overrightarrow{x_0}...\overrightarrow{x_{m - 1}}$, we need to find the most likely $s_0,...,s_{m - 1}$, i.e. $\argmax_{\overrightarrow{y} \in \mathcal{Y}^{m}}$.
+To get a sequence of labels for tokens from the hidden representation of the BERT $\overrightarrow{x_0}...\overrightarrow{x_{m - 1}}$, we need to find the most likely $s_0,...,s_{m - 1}$, i.e. $\mathop{\operatorname{arg\,max}}\limits_{\overrightarrow{y} \in \mathcal{Y}^{m}}$.
 
 ## Relation Extraction
 
