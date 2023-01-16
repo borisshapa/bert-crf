@@ -89,7 +89,7 @@ The key idea of CRF is the definition of a feature vector $$\overrightarrow{\Phi
 
 The function maps a pair of the input sequence and the label sequence to some feature vector in d-dimensional space.
 
-The probabilistic model is built as follows: $$p(\overrightarrow{y}|\overrightarrow{x}) = \frac{\exp(\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}))}{\sum\limits_{\overrightarrow{y'} \in \mathcal{Y}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'}))}$$
+The probabilistic model is built as follows: $$p(\overrightarrow{y}|\overrightarrow{x}) = \frac{\exp(\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}))}{\sum\limits_{\overrightarrow{y'} \in \mathcal{Y}^m} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'}))}$$
 where $\mathcal{Y}^m$ – the set of all possible token label sequences of length $m$.
 
 The function $\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y})$ is defined as follows: $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}) = \sum\limits_{i=0}^{m - 1} \log \psi_i(\overrightarrow{x}, i, y_{i - 1}, y_i)$$
@@ -99,14 +99,14 @@ $\log \psi_i$ consists of two parts: the first is the value of the corresponding
 $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}) = \log \psi_{\texttt{EMIT}} (y_0 \rightarrow x_0) + \sum\limits_{i=1}^{m - 1} \log \psi_{\texttt{EMIT}} (y_i \rightarrow x_i)  + \log \psi_{\texttt{TRANS}} (y_{i - 1} \rightarrow y_i)$$
 
 During training, negative log-likelihood is minimized:
-$$\texttt{NLL} = - \sum\limits_{i = 1}^n \log(p(\overrightarrow{y}^i | \overrightarrow{x}^i))$$
+$$\texttt{NLL} = - \sum\limits_{i = 0}^{n - 1} \log(p(\overrightarrow{y}^i | \overrightarrow{x}^i))$$
 where $x_i$, $y_i$ is an $i^{th}$ example from the training set.
 
 The question is how to effectively calculate the sum over all possible sequences $y'$ in the denominator. This is done using **dynamic programming**.
 
 #### Denominator calculation
 
-Let $\pi[i][y]$ be logarith of the sum of all label sequences $\log\sum\limits_{\overrightarrow{y'} \in \mathcal{Y}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'}))$ of length $i + 1$ ( $i \in \{ 0,...,m - 1 \} $)  ending in a label $y$. Then 
+Let $\pi[i][y]$ be logarith of the sum of all label sequences $\log\sum\limits_{\overrightarrow{y'} \in \mathcal{Y}^m} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'}))$ of length $i + 1$ ( $i \in \{ 0,...,m - 1 \} $)  ending in a label $y$. Then 
 
 $$\overrightarrow{\pi[0]} = \overrightarrow{tr_{\texttt{start}}} + \overrightarrow{x_0}$$
 
@@ -129,7 +129,7 @@ $$\pi[i][j] = \log \sum\limits_{y' \in \mathcal{Y}^{i + 1}, y'_{-1} = \mathcal{Y
 
 At the end, we add a potential vector, which is responsible for the probability of ending the sequence with the last token.
 
-$$\log \sum\limits_{\overrightarrow{y'} \in \mathcal{Y}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'})) = \log \sum\limits_{t = 0}^{|\mathcal{Y}| - 1} \pi[m][t] + tr_{\texttt{end}}[t]$$
+$$\log \sum\limits_{\overrightarrow{y'} \in \mathcal{Y}^m} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'})) = \log \sum\limits_{t = 0}^{|\mathcal{Y}| - 1} \pi[m][t] + tr_{\texttt{end}}[t]$$
 
 Since when recalculating the vector $\overrightarrow{\pi[i]}$ we use only the previous vector $\overrightarrow{\pi[i - 1]}$, we may not store the entire matrix $\pi$, but only the last vector.
 
@@ -157,7 +157,7 @@ def compute_log_denominator(self, x: torch.Tensor) -> torch.Tensor:
 
 #### Decoding with CRF
 
-To get a sequence of labels for tokens from the hidden representation of the BERT $\overrightarrow{x_0}...\overrightarrow{x_m}$, we need to find the most likely $s_0,...,s_m$, i.e. $\argmax\limits_{\overrightarrow{y} \in \mathcal{Y}^{m + 1}}$.
+To get a sequence of labels for tokens from the hidden representation of the BERT $\overrightarrow{x_0}...\overrightarrow{x_{m - 1}}$, we need to find the most likely $s_0,...,s_{m - 1}$, i.e. $\argmax_{\overrightarrow{y} \in \mathcal{Y}^{m}}$.
 
 ## Relation Extraction
 
