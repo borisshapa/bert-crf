@@ -5,7 +5,20 @@ on RuREBus dataset (_Russian Relation Extraction for Business_).
 
 ![](resources/images/general_scheme.png)
 
-### Structure
+#### Table of content
+* [Structure](#structure)
+* [Requirements](#requirements)
+* [Named Entity Recognition](#ner)
+  * [Data for NER](#ner-data)
+  * [BERT + CRF](#ner-model)
+* [Relation extraction](#re)
+  * [Data for RE](#re-data)
+  * [Relation classifier](#re-model)
+* [Experiments and results](#experiments)
+  * [NER](#ner-results)
+  * [RE](#re-results)
+
+### <a name="structure"></a>Structure
 * [`datasets`](./datasets) – implementations of torch datasets.
 * [`models`](./models) – models implementation (bert+crf, classifier for RE task solving)
 * [`re_utils`](./re_utils) – various useful utilities (e.g. for working with files, ner data structure, for training models).
@@ -15,7 +28,7 @@ on RuREBus dataset (_Russian Relation Extraction for Business_).
 * [`ner_experiments.ipynb`](./ner_experiments.ipynb) – training different models to solve NER task.
 * [`re_experiments.ipynb`](./re_experiments.ipynb) – training model to solve RE task.
 
-### Requirements
+### <a name="requirements"></a>Requirements
 
 Create virtual environment with `venv` or `conda` and install requirements:
 
@@ -28,9 +41,9 @@ Or build and run docker container:
 ./run_docker.sh
 ```
 
-## Named Entity Recognition
+## <a name="ner"></a>Named Entity Recognition
 
-### Data
+### <a name="ner-data"></a>Data
 _"The corpus contains regional reports and strategic plans. A part of the corpus is annotated with named entities (8 classes) and semantic relations (11 classes). In total there are approximately 300 annotated documents. The annotation schema and the guidelines for annotators can be found in here (in Russian)."_
 
 from [RuREBus](https://github.com/dialogue-evaluation/RuREBus.git) repo
@@ -79,7 +92,7 @@ This script creates 4 files in the same directory as the text and annotation dat
    ```
 * `relations.jsonl`, `retag2id.json` – more details about these files are described in the **Data** subsection of the **Relation Extraction** section.
 
-### Models
+### <a name="ner-model"></a>Model
 
 The outputs of the [BERT](https://arxiv.org/abs/1810.04805) model pretrained on the corpus of business texts are processed using [Conditional Random Field](http://www.cs.columbia.edu/~mcollins/crf.pdf).
 
@@ -201,9 +214,9 @@ def viterbi_decode(self, x: torch.Tensor) -> List[List[int]]:
 
 From the obtained `backpointers`, it is easy to restore the path and the corresponding sequence of labels.
 
-## Relation Extraction
+## <a name="re"></a>Relation Extraction
 
-### Data
+### <a name="re-data"></a>Data
 
 By running the script [scripts/tokenize_texts.py](./scripts/tokenize_texts.py) described in the **Data** subsection of the **NER** section, among others,
 two files are obtained that describe the relationships between entities in the data:
@@ -244,18 +257,48 @@ This script creates two files:
   
   ```{"SOC": 0, "ECO": 1, "ACT": 2, "CMP": 3, "MET": 4, ...}```
 
-### Models
+### <a name="re-model"></a>Model
 
-==========================
+The idea for the model was taken from the article [Enriching Pre-trained Language Model with Entity Information for Relation Classification](https://arxiv.org/abs/1905.08284)
 
-### BERT-CRF for Named Entity Recognition (NER):
+![](resources/images/re_model.png)
 
-In [experiments.ipynb](experiments.ipynb) notebook we've provide code for training different version of BERT model.
-Our finetunned BERT with CRF layer shows the best F1-Micro score.
+The input model recieves fields `seq_embedding`, `entities_embeddings`, `entities_tags` from a file `re_data.jsonl` and evaluates the relationship tag for each pair of named entities (or lack of relationship) according to the scheme from the figure above.
+
+A relationship matrix is built and the cross entropy between the prediction matrix and the ground truth `relation_matrix` from the file `re_data.jsonl` is calculated.
+
+## <a name="experiments"></a>Experiments and results
+
+### <a name="ner-results"></a>BERT-CRF for Named Entity Recognition (NER):
+
+In [ner_experiments.ipynb](ner_experiments.ipynb) notebook we've provide code for training different version of BERT model.
+Our finetunned BERT with CRF layer shows the best f1-micro score.
+
+* ruBERT
+  ![](resources/images/rubert.png)
+* ruBERT + CRF
+  ![](resources/images/rubert_crf.png)
+* ruREBus-BERT
+  ![](resources/images/rurebus_bert.png)
+* ruREBus-BERT + CRF
+  ![](resources/images/rurebus_bert_crf.png)
 
 |          | ruBERT | ruBERT + CRF | ruREBus-BERT | ruREBus-BERT + CRF |
 |----------|--------|--------------|--------------|--------------------|
-| F1-micro | 0.8023 | 0.8057       | 0.8052       | **0.8122**         |
+| f1-micro | 0.8046 | 0.8092       | 0.8119       | **0.8128**         |
 
-### BERT-CRF for Relation Extraction (RE):
+### <a name="re-results"></a>BERT-CRF for Relation Extraction (RE):
 
+#### Honset F1
+Since the text was broken into pieces no larger than 512 tokens, for some relations the arguments ended up in different pieces of text.
+For the test dataset, there were _248_ such lost relationships. We consider them undetected by the model and assign them to `false negative`.
+
+`true positive` and `false positive` were calculated by comparing predicted relation matrix with ground truth relation matrix from `re_data.jsonl` file.
+
+$$\texttt{F1} = \frac{\texttt{true positive}}{\texttt{true_positive} + \frac{1}{2} \cdot (\texttt{false positive} + \texttt{false negative})}$$
+
+![](resources/images/re_f1.png)
+
+Due to the lost relations and errors of the NER model, the value of f1-micro turned out to be not very large:
+
+f1-micro = **0.2636**
