@@ -73,7 +73,7 @@ This script creates 4 files in the same directory as the text and annotation dat
    * `text_labels` – named entity labels for tokens. Labels are assigned to tokens according to the BIO system: in this case, if the token does not belong to the named entity, then it is marked with the "O" label; the label of the first named entity token is prefixed with "B-"; other named entity tokens begin with "I-". The corresponding prefix is followed by a tag denoting the class of the named entity.
    * `labels` – `text_labels` converted to numbers
 
-* `label2id.jsonl` – mapping from a tag's text representation to a number, e.g:
+* `label2id.jsonl` – mapping from a label's text representation to a number, e.g:
    ```
    {"O": 0, "B-ECO": 1, "B-CMP": 2, "I-SOC": 3, "I-INST": 4, "B-INST": 5, ...}
    ```
@@ -202,6 +202,49 @@ def viterbi_decode(self, x: torch.Tensor) -> List[List[int]]:
 From the obtained `backpointers`, it is easy to restore the path and the corresponding sequence of labels.
 
 ## Relation Extraction
+
+### Data
+
+By running the script [scripts/tokenize_texts.py](./scripts/tokenize_texts.py) described in the **Data** subsection of the **NER** section, among others,
+two files are obtained that describe the relationships between entities in the data:
+* `relations.jsonl` – for each text all relations are described
+  ```
+  {"id": 3, "relations": [{"arg1_tag": "BIN", "arg2_tag": "ACT", "arg1_pos": [135, 136], "arg2_pos": [142, 149], "re_tag": "TSK", "tag": 1}]}
+  ```
+  * `id` – index of a piece of text in the dataset
+  * `arg1_tag` – the tag of the named entity that is the first argument to the relation
+  * `arg2_tag` – the tag of the named entity that is the second argument to the relation
+  * `arg1_pos` – the position of the first argument in the text, the indexes of tokens are indicated (not symbols and not words!), the named entity lies in the half-interval `[arg1_pos[0], arg1_pos[1])`
+  * `arg2_pos` – similar for the second argument
+  * `re_tag` – relationship tag string value
+  * `tag` – id tag relationship
+* `retag2id.jsonl` – mapping from a relation tag's text representation to a number, e.g:
+  
+  ```{"PPS": 0, "TSK": 1, "NNG": 2, "FNG": 3, "GOL": 4, "FPS": 5,...}```
+
+These files, as well as the trained model for NER, are used to compile a dataset for training the relationship detection model.
+
+This data is prepared using a script [scripts/prepare_data_for_re.py](./scripts/prepare_data_for_re.py)
+
+```shell
+python -m scripts.prepare_data_for_re
+```
+
+This script creates two files:
+
+* `re_data.jsonl` – relationships between entities that the model has identified for the detection of named entities. Each line of the file is a dictionary, which consists of the following fields:
+  * `id` – index of a piece of text in the dataset
+  * `seq_embedding` – embedding the entire piece of text
+  * `entities_embeddings` – embeddings of named entities highlighted by the NER model.
+  * `relation_matrix` – matrix of relations between tokens allocated by the NER model: `relation_matrix[i][j] = tag_id` if there is a relationship between $i^{th}$ and $j^{th}$ entities from the array `entities_tags` that has `tag` with id `tag_id` (according to the file `retag2id.jsonl`).
+  * `entities_tags` – tags of selected named entities by the NER model (without `B-`, `I-` prefixes).
+  * `entities_positions` – positions of entities highlighted by the NER model in the same format as for keys `arg1_pos`, `arg2_pos` in the file `relations.jsonl` $$
+  ![](./resources/images/re_data.png)
+* `entity_tag_to_id.json` – mapping from an entity tag's text representation to a number, e.g:
+  
+  ```{"SOC": 0, "ECO": 1, "ACT": 2, "CMP": 3, "MET": 4, ...}```
+
+### Models
 
 ==========================
 
