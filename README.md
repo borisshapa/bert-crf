@@ -110,7 +110,7 @@ Let $\pi[i][y]$ be logarith of the sum of all label sequences $\log\sum\limits_{
 
 $$\overrightarrow{\pi[0]} = \overrightarrow{tr_{\texttt{start}}} + \overrightarrow{x_0}$$
 
-The calculation for the indices 1..m will be better understood from the figure:
+The calculation for the indices 1..m - 1 will be better understood from the figure:
 ![](resources/images/dp.png)
 
 $$\pi[i-1][j] = \log \sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[j]} \exp(\sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y'_k \rightarrow x_k)  + \log \psi_{\texttt{TRANS}} (y'_{k - 1} \rightarrow y'_k))$$
@@ -137,27 +137,69 @@ If we take into account that gradient descent uses batches, then the calculation
 
 ```python
 def compute_log_denominator(self, x: torch.Tensor) -> torch.Tensor:
-        m = x.shape[0]
+    m = x.shape[0]
 
-        pi = self.tr_start + x[0]
+    pi = self.tr_start + x[0]
 
-        # x.shape == [batch_size, seq_len, num_type_of_labels]
-        # pi.shape == [batch_size, num_type_of_labels]
-        # self.tr.shape == [num_type_of_labels, num_type_of_labels]
+    # x.shape == [seq_len, batch_size, num_type_of_labels]
+    # pi.shape == [batch_size, num_type_of_labels]
+    # self.tr.shape == [num_type_of_labels, num_type_of_labels]
 
-        for i in range(1, m):
-            pi = torch.logsumexp(
-                pi.unsqueeze(2) + self.tr + x[i].unsqueeze(1),
-                dim=1,
-            )
+    for i in range(1, m):
+        pi = torch.logsumexp(
+            pi.unsqueeze(2) + self.tr + x[i].unsqueeze(1),
+            dim=1,
+        )
 
-        pi += self.tr_end
-        return torch.logsumexp(pi, dim=1)
+    pi += self.tr_end
+    return torch.logsumexp(pi, dim=1)
 ```
 
 #### Decoding with CRF
 
-To get a sequence of labels for tokens from the hidden representation of the BERT $\overrightarrow{x_0}...\overrightarrow{x_{m - 1}}$, we need to find the most likely $s_0,...,s_{m - 1}$, i.e. $\mathop{\operatorname{argmax}}\limits_{\overrightarrow{y} \in \mathcal{Y}^{m}}$.
+To get a sequence of labels for tokens from the hidden representation of the BERT $\overrightarrow{x_0}...\overrightarrow{x_{m - 1}}$, we need to find the most likely $s_0,...,s_{m - 1}$, i.e. $\mathop{\operatorname{argmax}}\limits_{\overrightarrow{y} \in \mathcal{Y}^{m}} p(\overrightarrow{y}|\overrightarrow{x})$.
+
+We can simplify the expression as follows:
+
+$$\mathop{\operatorname{argmax}}\limits_{\overrightarrow{y} \in \mathcal{Y}^{m}} p(\overrightarrow{y}|\overrightarrow{x}) = \mathop{\operatorname{argmax}}\limits_{\overrightarrow{y} \in \mathcal{Y}^{m}} \frac{\exp(\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}))}{\sum\limits_{\overrightarrow{y'} \in \mathcal{Y}^m} \exp(\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y'})))}$$
+
+$$= \mathop{\operatorname{argmax}}\limits_{\overrightarrow{y} \in \mathcal{Y}^m} exp(\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}))$$
+
+$$= \mathop{\operatorname{argmax}}\limits_{\overrightarrow{y} \in \mathcal{Y}^m} \overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y})$$
+
+$$= \mathop{\operatorname{argmax}}\limits_{\overrightarrow{y} \in \mathcal{Y}^m} \sum\limits_{i=0}^{m - 1} \log \psi_i(\overrightarrow{x}, i, y_{i - 1}, y_i)$$
+
+The decoding problem is to find an entire sequence of labels such that the sum of potentials is maximized. The problem is also solved using **dynamic programming**.
+
+All formulas are similar to those used when calculating the denominator in $\texttt{NLL}$, but the logarithm of the sum of the exponents is replaced by the maximum function and $pi[t]$ stores the maximum value of the sum of a sequence of length $i + 1$ ($i$ – current step, $i \in {0, ..., m - 1}$) that ends with the label $\mathcal{Y}[t]$. In code it looks like this:
+
+```python
+def viterbi_decode(self, x: torch.Tensor) -> List[List[int]]:
+    m, bs, num_type_of_labels = x.shape
+
+    pi = self.tr_start + x[0]
+
+    backpointers = torch.empty_like(x)
+
+    # x.shape == [seq_len, batch_size, num_type_of_labels]
+    # pi.shape == [batch_size, num_type_of_labels]
+    # self.tr.shape == [num_type_of_labels, num_type_of_labels]
+
+    for i in range(1, m):
+        pi = (
+            pi.unsqueeze(2) + self.tr + x[i].unsqueeze(1)
+        ) # shape = [batch_size, num_type_of_labels, num_type_of_labels]
+        
+        
+        pi, indices = pi.max(dim=1) # for each next label, determine from which it is most profitable to come to it.
+        backpointers[i] = indices
+
+    backpointers = backpointers[1:].int()
+
+    pi += self.tr_end
+```
+
+From the obtained `backpointers`, it is easy to restore the path and the corresponding sequence of labels.
 
 ## Relation Extraction
 
