@@ -111,15 +111,19 @@ $$\overrightarrow{\pi[0]} = \overrightarrow{tr_{\texttt{start}}} + \overrightarr
 The calculation for the indices 1..m will be better understood from the figure:
 ![](resources/images/dp.png)
 
-$$\pi[i-1][j] = \log \sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[j]} \exp(\sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y_k \rightarrow x_k)  + \log \psi_{\texttt{TRANS}} (y_{k - 1} \rightarrow y_k))$$
+$$\pi[i-1][j] = \log \sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[j]} \exp(\sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y'_k \rightarrow x_k)  + \log \psi_{\texttt{TRANS}} (y'_{k - 1} \rightarrow y'_k))$$
 
 $$\pi[i][j] = \log \sum\limits_{t = 0} ^ {|\mathcal{Y}| - 1} \exp (\pi[i - 1][t] + \log \psi_{\texttt{EMIT}} (y_i \rightarrow x_i)  + \log \psi_{\texttt{TRANS}} (\mathcal{Y}[t] \rightarrow \mathcal{Y}[j]))$$
 
-$$\pi[i][j] = \log \sum\limits_{t = 0} ^ {|\mathcal{Y}| - 1} \exp (\log \sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[t]} \exp(\sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y_k \rightarrow x_k)  + \log \psi_{\texttt{TRANS}} (y_{k - 1} \rightarrow y_k)) + \log \psi_{\texttt{EMIT}} (y_i \rightarrow x_i)  + \log \psi_{\texttt{TRANS}} (\mathcal{Y}[t] \rightarrow \mathcal{Y}[j]))$$
+$$\pi[i][j] = \log \sum\limits_{t = 0} ^ {|\mathcal{Y}| - 1} \exp (\log \sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[t]} \exp(\sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y'_k \rightarrow x_k)  + \log \psi_{\texttt{TRANS}} (y'_{k - 1} \rightarrow y'_k)) + \log \psi_{\texttt{EMIT}} (y_i \rightarrow x_i)  + \log \psi_{\texttt{TRANS}} (\mathcal{Y}[t] \rightarrow \mathcal{Y}[j]))$$
 
-$$\pi[i][j] = \log \sum\limits_{t = 0} ^ {|\mathcal{Y}| - 1} \exp (\log (\sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[t]} \exp(\sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y_k \rightarrow x_k) + \log \psi_{\texttt{TRANS}} (y_{k - 1} \rightarrow y_k)) \cdot \psi_{\texttt{EMIT}} (y_i \rightarrow x_i) \cdot \psi_{\texttt{TRANS}} (\mathcal{Y}[t] \rightarrow \mathcal{Y}[j])))$$
+$$\pi[i][j] = \log \sum\limits_{t = 0} ^ {|\mathcal{Y}| - 1} \exp (\log (\sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[t]} \exp(\sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y'_k \rightarrow x_k) + \log \psi_{\texttt{TRANS}} (y'_{k - 1} \rightarrow y'_k)) \cdot \psi_{\texttt{EMIT}} (y_i \rightarrow x_i) \cdot \psi_{\texttt{TRANS}} (\mathcal{Y}[t] \rightarrow \mathcal{Y}[j])))$$
 
-$$\pi[i][j] = \log \sum\limits_{t = 0} ^ {|\mathcal{Y}| - 1} \sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[t]} \exp(\sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y_k \rightarrow x_k) + \log \psi_{\texttt{TRANS}} (y_{k - 1} \rightarrow y_k)) \cdot \psi_{\texttt{EMIT}} (y_i \rightarrow x_i) \cdot \psi_{\texttt{TRANS}} (\mathcal{Y}[t] \rightarrow \mathcal{Y}[j])$$
+$$\pi[i][j] = \log \sum\limits_{t = 0} ^ {|\mathcal{Y}| - 1} \sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[t]} \exp(\sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y'_k \rightarrow x_k) + \log \psi_{\texttt{TRANS}} (y'_{k - 1} \rightarrow y'_k)) \cdot \psi_{\texttt{EMIT}} (y_i \rightarrow x_i) \cdot \psi_{\texttt{TRANS}} (\mathcal{Y}[t] \rightarrow \mathcal{Y}[j])$$
+
+$$\pi[i][j] = \log \sum\limits_{t = 0} ^ {|\mathcal{Y}| - 1} \sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[t]} \exp(\log\psi_{\texttt{EMIT}} (y_i \rightarrow x_i) + \log\psi_{\texttt{TRANS}} (\mathcal{Y}[t] \rightarrow \mathcal{Y}[j]) + \sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y'_k \rightarrow x_k) + \log \psi_{\texttt{TRANS}} (y'_{k - 1} \rightarrow y'_k))$$
+
+$$\pi[i][j] = \log \sum\limits_{y' \in \mathcal{Y}^{i + 1}, y'_{-1} = \mathcal{Y}[j]} \exp(\sum\limits_{k = 0}^{i} \log \psi_{\texttt{EMIT}} (y'_k \rightarrow x_k) + \log \psi_{\texttt{TRANS}} (y'_{k - 1} \rightarrow y'_k))$$
 
 ## Relation Extraction
 
