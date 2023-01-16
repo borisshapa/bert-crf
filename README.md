@@ -83,28 +83,30 @@ This script creates 4 files in the same directory as the text and annotation dat
 
 The outputs of the [BERT](https://arxiv.org/abs/1810.04805) model pretrained on the corpus of business texts are processed using [Conditional Random Field](http://www.cs.columbia.edu/~mcollins/crf.pdf).
 
-The essence of CRF is to build a probabilistic model $$p(y_1...y_m|x_1...x_m) = p(\overrightarrow{y}|\overrightarrow{x})$$ where $y_i$ – token label, $x_i$ – token embedding obtained using BERT.
+The essence of CRF is to build a probabilistic model $$p(y_0...y_{m - 1}|\overrightarrow{x_0}...\overrightarrow{x_{m - 1}}) = p(\overrightarrow{y}|\overrightarrow{x})$$ where $y_i$ – token label, $x_i$ – token embedding obtained using BERT.
 
 The key idea of CRF is the definition of a feature vector $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}) \in \mathbb{R}^d$$
 
 The function maps a pair of the input sequence and the label sequence to some feature vector in d-dimensional space.
 
 The probabilistic model is built as follows: $$p(\overrightarrow{y}|\overrightarrow{x}) = \frac{\exp(\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}))}{\sum\limits_{\overrightarrow{y'} \in \mathcal{Y}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'}))}$$
-where $\mathcal{Y}^m$ – the set of all possible token label sequences.
+where $\mathcal{Y}^m$ – the set of all possible token label sequences of length $m$.
 
-The function $\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y})$ is defined as follows: $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}) = \sum\limits_{i=1}^m \log \psi_i(\overrightarrow{x}, i, y_{i - 1}, y_i)$$
+The function $\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y})$ is defined as follows: $$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}) = \sum\limits_{i=0}^{m - 1} \log \psi_i(\overrightarrow{x}, i, y_{i - 1}, y_i)$$
 
 $\log \psi_i$ consists of two parts: the first is the value of the corresponding logit that comes from BERT's embeddings, and the second is the transition potential from the previous $s$ value to the new one. This value is obtained from a square matrix of learning parameters with a side of size `num type of labels`.
 
-$$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}) = \sum\limits_{i=1}^m \log \psi_{\texttt{EMIT}} (y_i \rightarrow x_i)  + \log \psi_{\texttt{TRANS}} (y_{i - 1} \rightarrow y_i)$$
+$$\overrightarrow{\Phi}(\overrightarrow{x}, \overrightarrow{y}) = \log \psi_{\texttt{EMIT}} (y_0 \rightarrow x_0) + \sum\limits_{i=1}^{m - 1} \log \psi_{\texttt{EMIT}} (y_i \rightarrow x_i)  + \log \psi_{\texttt{TRANS}} (y_{i - 1} \rightarrow y_i)$$
 
 During training, negative log-likelihood is minimized:
 $$\texttt{NLL} = - \sum\limits_{i = 1}^n \log(p(\overrightarrow{y}^i | \overrightarrow{x}^i))$$
 where $x_i$, $y_i$ is an $i^{th}$ example from the training set.
 
-The question is how to effectively calculate the sum over all possible sequences $y'$ in the denominator. This is done using dynamic programming.
+The question is how to effectively calculate the sum over all possible sequences $y'$ in the denominator. This is done using **dynamic programming**.
 
-Let $\pi[i][y]$ be logarith of the sum of all label sequences $\log\sum\limits_{\overrightarrow{y'} \in \mathcal{Y}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'}))$ of length $i + 1$ ( $i \in \{ 0,...,m \} $)  ending in a label $y$. Then 
+#### Denominator calculation
+
+Let $\pi[i][y]$ be logarith of the sum of all label sequences $\log\sum\limits_{\overrightarrow{y'} \in \mathcal{Y}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'}))$ of length $i + 1$ ( $i \in \{ 0,...,m - 1 \} $)  ending in a label $y$. Then 
 
 $$\overrightarrow{\pi[0]} = \overrightarrow{tr_{\texttt{start}}} + \overrightarrow{x_0}$$
 
@@ -124,6 +126,38 @@ $$\pi[i][j] = \log \sum\limits_{t = 0} ^ {|\mathcal{Y}| - 1} \sum\limits_{y' \in
 $$\pi[i][j] = \log \sum\limits_{t = 0} ^ {|\mathcal{Y}| - 1} \sum\limits_{y' \in \mathcal{Y}^{i}, y'_{-1} = \mathcal{Y}[t]} \exp(\log\psi_{\texttt{EMIT}} (y_i \rightarrow x_i) + \log\psi_{\texttt{TRANS}} (\mathcal{Y}[t] \rightarrow \mathcal{Y}[j]) + \sum\limits_{k = 0}^{i - 1} \log \psi_{\texttt{EMIT}} (y'_k \rightarrow x_k) + \log \psi_{\texttt{TRANS}} (y'_{k - 1} \rightarrow y'_k))$$
 
 $$\pi[i][j] = \log \sum\limits_{y' \in \mathcal{Y}^{i + 1}, y'_{-1} = \mathcal{Y}[j]} \exp(\sum\limits_{k = 0}^{i} \log \psi_{\texttt{EMIT}} (y'_k \rightarrow x_k) + \log \psi_{\texttt{TRANS}} (y'_{k - 1} \rightarrow y'_k))$$
+
+At the end, we add a potential vector, which is responsible for the probability of ending the sequence with the last token.
+
+$$\log \sum\limits_{\overrightarrow{y'} \in \mathcal{Y}} \exp(\overrightarrow{\Phi}(\overrightarrow{x},\overrightarrow{y'})) = \log \sum\limits_{t = 0}^{|\mathcal{Y}| - 1} \pi[m][t] + tr_{\texttt{end}}[t]$$
+
+Since when recalculating the vector $\overrightarrow{\pi[i]}$ we use only the previous vector $\overrightarrow{\pi[i - 1]}$, we may not store the entire matrix $\pi$, but only the last vector.
+
+If we take into account that gradient descent uses batches, then the calculation of the denominator in $\texttt{NLL}$ looks like this:
+
+```python
+def compute_log_denominator(self, x: torch.Tensor) -> torch.Tensor:
+        m = x.shape[0]
+
+        pi = self.tr_start + x[0]
+
+        # x.shape == [batch_size, seq_len, num_type_of_labels]
+        # pi.shape == [batch_size, num_type_of_labels]
+        # self.tr.shape == [num_type_of_labels, num_type_of_labels]
+
+        for i in range(1, m):
+            pi = torch.logsumexp(
+                pi.unsqueeze(2) + self.tr + x[i].unsqueeze(1),
+                dim=1,
+            )
+
+        pi += self.tr_end
+        return torch.logsumexp(pi, dim=1)
+```
+
+#### Decoding with CRF
+
+To get a sequence of labels for tokens from the hidden representation of the BERT $\overrightarrow{x_0}...\overrightarrow{x_m}$, we need to find the most likely $s_0,...,s_m$, i.e. $\argmax\limits_{\overrightarrow{y} \in \mathcal{Y}^{m + 1}}$.
 
 ## Relation Extraction
 
